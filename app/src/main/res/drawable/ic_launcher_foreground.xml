@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Background Glow -->
+    <path
+        android:pathData="M54,54m-26,0a26,26 0 1,0 52,0a26,26 0 1,0 -52,0"
+        android:fillColor="#1500FFA3" />
+
+    <!-- Candlestick chart background accents -->
+    <path
+        android:pathData="M32,48 L32,66 M32,42 L32,72"
+        android:strokeColor="#4400FFA3"
+        android:strokeWidth="1.5" />
+    <path
+        android:pathData="M30,50 L34,50 L34,62 L30,62 Z"
+        android:fillColor="#8800FFA3" />
+
+    <path
+        android:pathData="M76,46 L76,64 M76,40 L76,70"
+        android:strokeColor="#4400E5FF"
+        android:strokeWidth="1.5" />
+    <path
+        android:pathData="M74,48 L78,48 L78,60 L74,60 Z"
+        android:fillColor="#8800E5FF" />
+
+    <!-- Hammer Head (Cybernetic Futuristic Block) -->
+    <path
+        android:pathData="M38,34 L70,34 C72.2,34 74,35.8 74,38 L74,46 C74,48.2 72.2,50 70,50 L38,50 C35.8,50 34,48.2 34,46 L34,38 C34,35.8 35.8,34 38,34 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="34"
+                android:startY="34"
+                android:endX="74"
+                android:endY="50"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#00FFA3" />
+                <item android:offset="0.5" android:color="#00E5FF" />
+                <item android:offset="1.0" android:color="#00A3FF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Hammer Head Inner Core Accent -->
+    <path
+        android:pathData="M42,38 L66,38 C67,38 68,39 68,40 L68,44 C68,45 67,46 66,46 L42,46 C41,46 40,45 40,44 L40,40 C40,39 41,38 42,38 Z"
+        android:fillColor="#1A2F4C" />
+
+    <!-- Text HM Core -->
+    <path
+        android:pathData="M45,41 L47,41 L47,43 L45,43 Z M51,41 L53,41 L53,43 L51,43 Z M57,41 L63,41 L63,43 L57,43 Z"
+        android:fillColor="#00FFA3" />
+
+    <!-- Hammer Handle (Candlestick Wick / Shaft) -->
+    <path
+        android:pathData="M51,50 L57,50 L56,76 C56,77.5 54.5,79 53,79 C51.5,79 50,77.5 50,76 L51,50 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="50"
+                android:startY="50"
+                android:endX="57"
+                android:endY="79"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#00E5FF" />
+                <item android:offset="1.0" android:color="#FFAA00" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Handle Grip Rings -->
+    <path
+        android:pathData="M50,56 L57,56 M50,62 L57,62 M50,68 L57,68"
+        android:strokeColor="#0B1320"
+        android:strokeWidth="1.2" />
+
+    <!-- Target / Crosshair Laser Reticle -->
+    <path
+        android:pathData="M24,54 L28,54 M80,54 L84,54 M54,24 L54,28 M54,80 L54,84"
+        android:strokeColor="#FFAA00"
+        android:strokeWidth="1.8" />
+</vector>

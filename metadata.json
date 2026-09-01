@@ -1,0 +1,6 @@
+{
+  "name": "HM Hammer Pro",
+  "description": "HM HAMMER v2.0 Anti-Fragile Crypto Trading Radar & Execution Engine with 5-pillar strategy, live radar scanner, wallet manager, and admin monitoring.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
