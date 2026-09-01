@@ -3,30 +3,21 @@ package com.example
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.example.ui.components.AppTabBar
 import com.example.ui.components.HeaderPulseBar
-import com.example.ui.screens.AdminScreen
-import com.example.ui.screens.ChartRadarScreen
-import com.example.ui.screens.HelpGuideScreen
-import com.example.ui.screens.PerformanceScreen
-import com.example.ui.screens.SubscriptionsScreen
-import com.example.ui.screens.TradeScreen
-import com.example.ui.screens.TransactionHistoryScreen
-import com.example.ui.screens.WalletScreen
+import com.example.ui.components.LanguageOption
+import com.example.ui.screens.*
 import com.example.ui.theme.DarkNavyBg
-import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.viewmodel.AppTab
 import com.example.ui.viewmodel.MainViewModel
 
@@ -35,17 +26,28 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
-            MyApplicationTheme {
-                MainAppScreen(viewModel = viewModel)
+            var selectedLanguage by remember { mutableStateOf(LanguageOption.FA) }
+            val isRtl = selectedLanguage == LanguageOption.FA || selectedLanguage == LanguageOption.AR
+            val layoutDirection = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
+
+            CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
+                MainAppScreen(
+                    viewModel = viewModel,
+                    currentLanguage = selectedLanguage,
+                    onLanguageChanged = { selectedLanguage = it }
+                )
             }
         }
     }
 }
 
 @Composable
-fun MainAppScreen(viewModel: MainViewModel) {
+fun MainAppScreen(
+    viewModel: MainViewModel,
+    currentLanguage: LanguageOption = LanguageOption.FA,
+    onLanguageChanged: (LanguageOption) -> Unit = {}
+) {
     val currentTab by viewModel.currentTab.collectAsState()
     val isPulseAlive by viewModel.isRadarPulseAlive.collectAsState()
 
@@ -59,22 +61,21 @@ fun MainAppScreen(viewModel: MainViewModel) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(DarkNavyBg)
         ) {
-            // Live Status Radar Pulse Header
             HeaderPulseBar(
                 isAlive = isPulseAlive,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                isPulseAlive = isPulseAlive,
+                currentLanguage = currentLanguage,
+                onLanguageSelected = onLanguageChanged
             )
 
-            // Scrollable App Tab Bar
             AppTabBar(
                 selectedTab = currentTab,
                 onTabSelected = { viewModel.setTab(it) },
+                currentLanguage = currentLanguage,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
             )
 
-            // Active Tab Screen View
             when (currentTab) {
                 AppTab.CHART -> ChartRadarScreen(viewModel = viewModel)
                 AppTab.TRADE -> TradeScreen(viewModel = viewModel)
@@ -83,9 +84,8 @@ fun MainAppScreen(viewModel: MainViewModel) {
                 AppTab.PERFORMANCE -> PerformanceScreen(viewModel = viewModel)
                 AppTab.SUBSCRIPTIONS -> SubscriptionsScreen(viewModel = viewModel)
                 AppTab.HELP -> HelpGuideScreen()
-                AppTab.ADMIN -> AdminScreen(viewModel = viewModel)
+                AppTab.ADMIN -> AdminScreen(viewModel = viewModel, currentLanguage = currentLanguage)
             }
         }
     }
 }
-
