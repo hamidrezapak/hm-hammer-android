@@ -12,16 +12,16 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
 
-      - name: Setup Gradle 8.7
+      - name: Setup Gradle 9.3.1
         uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: '8.7'
+          gradle-version: '9.3.1'
 
       - name: Generate Debug Keystore
         run: |
@@ -30,13 +30,15 @@ jobs:
           cp debug.keystore app/debug.keystore
 
       - name: Generate Gradle Wrapper
-        run: gradle wrapper --gradle-version 8.7
+        run: gradle wrapper --gradle-version 9.3.1
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug -x test --no-daemon
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=--add-opens=java.base/java.lang=ALL-UNNAMED -Dkotlin.daemon.jvm.options=--add-opens=java.base/java.lang=ALL-UNNAMED"
+        run: ./gradlew assembleDebug -x test --stacktrace
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
