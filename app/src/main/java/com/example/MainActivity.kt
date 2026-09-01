@@ -17,6 +17,7 @@ import com.example.ui.components.HeaderPulseBar
 import com.example.ui.components.LanguageOption
 import com.example.ui.screens.*
 import com.example.ui.theme.DarkNavyBg
+import com.example.ui.theme.LocalAppLanguage
 import com.example.ui.viewmodel.AppTab
 import com.example.ui.viewmodel.MainViewModel
 
@@ -30,7 +31,10 @@ class MainActivity : ComponentActivity() {
             val isRtl = selectedLanguage == LanguageOption.FA || selectedLanguage == LanguageOption.AR
             val layoutDirection = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
 
-            CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
+            CompositionLocalProvider(
+                LocalLayoutDirection provides layoutDirection,
+                LocalAppLanguage provides selectedLanguage
+            ) {
                 MainAppScreen(
                     viewModel = viewModel,
                     currentLanguage = selectedLanguage,
@@ -79,11 +83,11 @@ fun MainAppScreen(
                 AppTab.CHART -> ChartRadarScreen(viewModel = viewModel)
                 AppTab.TRADE -> TradeScreen(viewModel = viewModel)
                 AppTab.HISTORY -> TransactionHistoryScreen(viewModel = viewModel)
-                AppTab.WALLET -> WalletScreen(viewModel = viewModel, currentLanguage = currentLanguage)
+                AppTab.WALLET -> WalletScreen(viewModel = viewModel)
                 AppTab.PERFORMANCE -> PerformanceScreen(viewModel = viewModel)
-                AppTab.SUBSCRIPTIONS -> SubscriptionsScreen(viewModel = viewModel, currentLanguage = currentLanguage)
-                AppTab.HELP -> HelpGuideScreen(currentLanguage = currentLanguage)
-                AppTab.ADMIN -> AdminScreen(viewModel = viewModel, currentLanguage = currentLanguage)
+                AppTab.SUBSCRIPTIONS -> SubscriptionsScreen(viewModel = viewModel)
+                AppTab.HELP -> HelpGuideScreen()
+                AppTab.ADMIN -> AdminScreen(viewModel = viewModel)
             }
         }
     }
