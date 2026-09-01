@@ -14,50 +14,58 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.components.LanguageOption
-import com.example.ui.theme.AppLocale
 
 @Composable
 fun HelpGuideScreen(
     currentLanguage: LanguageOption = LanguageOption.FA
 ) {
+    val isFa = currentLanguage == LanguageOption.FA
+    val isAr = currentLanguage == LanguageOption.AR
+
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
             Text(
-                text = AppLocale.t("help_title", currentLanguage),
+                text = if (isFa) "پروتکل و قوانین استراتژی موتور معاملاتی" else if (isAr) "بروتوكول واستراتيجية محرك التداول" else "ANTI-FRAGILE STRATEGY RULES (v2.0)",
                 color = Color.Gray,
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold
             )
         }
         item {
-            RuleCard(
+            RuleCardItem(
                 num = "01",
-                title = AppLocale.t("rule_1_title", currentLanguage),
-                desc = AppLocale.t("rule_1_desc", currentLanguage)
+                title = if (isFa) "الگوی هندسی کندل (چکش و پین‌بار)" else if (isAr) "هندسة الشموع (المطرقة والنجم الساقط)" else "CANDLE GEOMETRY (HAMMER & SHOOTING STAR)",
+                desc = if (isFa) "سایه پایینی باید حداقل ۲ برابر طول بدنه باشد و سایه بالایی کمتر از ۰.۲۵ بدنه برای تایید ورود الزامی است."
+                else if (isAr) "يجب أن يكون الظل السفلي ضعف جسم الشمعة على الأقل والظل العلوي أقل من 0.25 لتأكيد الدخول."
+                else "Lower shadow >= 2.0x body, upper shadow <= 0.25x body for confirmation."
             )
         }
         item {
-            RuleCard(
+            RuleCardItem(
                 num = "02",
-                title = AppLocale.t("rule_2_title", currentLanguage),
-                desc = AppLocale.t("rule_2_desc", currentLanguage)
+                title = if (isFa) "فیلتر روند ماکرو (EMA 200)" else if (isAr) "فلتر الاتجاه العام (EMA 200)" else "MACRO TREND FILTER (EMA 200)",
+                desc = if (isFa) "پوزیشن خرید فقط بالای خط EMA 200 و پوزیشن فروش فقط زیر EMA 200 مجاز است."
+                else if (isAr) "صفقات الشراء تتطلب أن يكون السعر أعلى من خط EMA 200 بالكامل."
+                else "Long positions require Price > EMA200; Short positions require Price < EMA200."
             )
         }
         item {
-            RuleCard(
+            RuleCardItem(
                 num = "03",
-                title = AppLocale.t("rule_3_title", currentLanguage),
-                desc = AppLocale.t("rule_3_desc", currentLanguage)
+                title = if (isFa) "حد ضرر و اهداف سود پویا بر پایه ATR" else if (isAr) "وقف الخسارة وجني الأرباح الديناميكي (ATR)" else "DYNAMIC SL & TP TARGETS (ATR BASED)",
+                desc = if (isFa) "حد ضرر روی ۱.۵ برابر ATR محاسبه می‌شود و با رسیدن به هدف اول به نقطه ورود منتقل می‌گردد."
+                else if (isAr) "يتم تحديد وقف الخسارة عند 1.5x ATR ونقل الوقف إلى سعر الدخول عند تحقيق الهدف الأول."
+                else "Stop loss fixed at 1.5x ATR with breakeven trailing protection upon TP1 hit."
             )
         }
     }
 }
 
 @Composable
-fun RuleCard(num: String, title: String, desc: String) {
+fun RuleCardItem(num: String, title: String, desc: String) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
         border = BorderStroke(1.dp, Color(0xFF30363D)),

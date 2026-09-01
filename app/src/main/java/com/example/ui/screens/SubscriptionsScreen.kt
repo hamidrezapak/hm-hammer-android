@@ -17,44 +17,85 @@ import com.example.ui.viewmodel.MainViewModel
 
 @Composable
 fun SubscriptionsScreen(
-    viewModel: MainViewModel,
+    viewModel: MainViewModel? = null,
     currentLanguage: LanguageOption = LanguageOption.FA
 ) {
+    val isFa = currentLanguage == LanguageOption.FA
+    val isAr = currentLanguage == LanguageOption.AR
+
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
             Text(
-                text = AppLocale.t("plans_title", currentLanguage),
+                text = if (isFa) "پلن‌های اشتراک + ۲.۵٪ کارمزد سود" else if (isAr) "باقات الاشتراك + 2.5% عمولة أرباح" else "Subscription Plans & 2.5% Profit Share",
                 color = Color.Gray,
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold
             )
         }
+
+        // ۱. پلن استاندارد (Standard)
         item {
-            PlanDetailCard(
-                title = "VIP ELITE",
-                price = if (currentLanguage == LanguageOption.FA) "۱۹,۰۰۰,۰۰۰ تومان / ماهانه" else "$300 / Month",
-                desc = AppLocale.t("plan_vip_desc", currentLanguage),
-                color = Color(0xFFF59E0B),
-                btnText = AppLocale.t("upgrade_btn", currentLanguage)
+            PlanCardItem(
+                title = "STANDARD",
+                price = if (isFa) "۱,۵۰۰,۰۰۰ تومان / ماهانه" else if (isAr) "$25 / شهرياً" else "$25 / Month",
+                cap = if (isFa) "محدودیت سرمایه تا ۱,۰۰۰ دلار" else "Max Capital $1,000",
+                desc = if (isFa) "مناسب شروع • بدون اسلیپیج • اتصال مستقیم صرافی نوبیتکس و والکس"
+                else if (isAr) "مناسب للمبتدئين • بدون انزلاق سعري • ربط مباشر للمنصات"
+                else "Ideal for beginners • Zero slippage • Direct API access",
+                color = Color(0xFF38BDF8),
+                btnText = if (isFa) "انتخاب پلن استاندارد" else if (isAr) "اختيار باقة ستاندرد" else "SELECT STANDARD"
             )
         }
+
+        // ۲. پلن پرو (PRO)
         item {
-            PlanDetailCard(
-                title = "PRO SCALP",
-                price = if (currentLanguage == LanguageOption.FA) "۳,۸۰۰,۰۰۰ تومان / ماهانه" else "$60 / Month",
-                desc = AppLocale.t("plan_pro_desc", currentLanguage),
+            PlanCardItem(
+                title = "PRO CLASSIC",
+                price = if (isFa) "۳,۸۰۰,۰۰۰ تومان / ماهانه" else if (isAr) "$60 / شهرياً" else "$60 / Month",
+                cap = if (isFa) "محدودیت سرمایه تا ۱۰,۰۰۰ دلار" else "Max Capital $10,000",
+                desc = if (isFa) "مدیریت ریسک خودکار ۲٪ • اهرم تا ۵ برابر • فیلتر واگرایی RSI"
+                else if (isAr) "إدارة مخاطر آلية 2% • رافعة مالية حتى 5x • فلتر RSI الذكي"
+                else "2% Auto Risk Lock • Up to 5x Leverage • RSI Divergence Filter",
                 color = Color(0xFF818CF8),
-                btnText = AppLocale.t("upgrade_btn", currentLanguage)
+                btnText = if (isFa) "ارتقا به پلن پرو" else if (isAr) "ترقية إلى باقة برو" else "UPGRADE TO PRO"
+            )
+        }
+
+        // ۳. پلن الیت (ELITE)
+        item {
+            PlanCardItem(
+                title = "PRO ELITE",
+                price = if (isFa) "۸,۵۰۰,۰۰۰ تومان / ماهانه" else if (isAr) "$135 / شهرياً" else "$135 / Month",
+                cap = if (isFa) "سرمایه تا ۵۰,۰۰۰ دلار" else "Max Capital $50,000",
+                desc = if (isFa) "ثبت تا ۵۰ اردر همزمان • حد سود پویا ATR سه‌گانه • رادار هشدار آنی"
+                else if (isAr) "تنفيذ حتى 50 صفقة دفعة واحدة • أهداف ATR ثلاثية • رادار تنبيهات حي"
+                else "Up to 50 batch orders • Triple ATR TP Targets • Live Radar Signals",
+                color = Color(0xFFC084FC),
+                btnText = if (isFa) "ارتقا به پلن الیت" else if (isAr) "ترقية إلى باقة إليت" else "UPGRADE TO ELITE"
+            )
+        }
+
+        // ۴. پلن وی‌آی‌پی (VIP)
+        item {
+            PlanCardItem(
+                title = "VIP ELITE MASTER",
+                price = if (isFa) "۱۹,۰۰۰,۰۰۰ تومان / ماهانه" else if (isAr) "$300 / شهرياً" else "$300 / Month",
+                cap = if (isFa) "سرمایه نامحدود • بدون سقف" else "Unlimited Capital",
+                desc = if (isFa) "اولویت شماره یک پردازش • صفر درصد کارمزد پلتفرم • سرور و انجین اختصاصی"
+                else if (isAr) "أولوية قصوى للتنفيذ • 0.0% عمولة المنصة • خادم ومحرك خاص 24/7"
+                else "Priority #1 Order Dispatch • 0.0% Platform Commission • 24/7 Dedicated Engine",
+                color = Color(0xFFF59E0B),
+                btnText = if (isFa) "فعال‌سازی پلن VIP" else if (isAr) "تفعيل باقة VIP" else "ACTIVATE VIP MASTER"
             )
         }
     }
 }
 
 @Composable
-fun PlanDetailCard(title: String, price: String, desc: String, color: Color, btnText: String) {
+fun PlanCardItem(title: String, price: String, cap: String, desc: String, color: Color, btnText: String) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
         border = BorderStroke(1.dp, color.copy(alpha = 0.6f)),
@@ -66,7 +107,9 @@ fun PlanDetailCard(title: String, price: String, desc: String, color: Color, btn
                 Text(text = title, color = color, fontWeight = FontWeight.Black, fontSize = 14.sp)
                 Text(text = price, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = cap, color = Color(0xFF00E676), fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+            Spacer(modifier = Modifier.height(6.dp))
             Text(text = desc, color = Color.LightGray, fontSize = 11.sp, lineHeight = 16.sp)
             Spacer(modifier = Modifier.height(12.dp))
             Button(

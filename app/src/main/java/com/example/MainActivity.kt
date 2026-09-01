@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -80,10 +79,10 @@ fun MainAppScreen(
                 AppTab.CHART -> ChartRadarScreen(viewModel = viewModel)
                 AppTab.TRADE -> TradeScreen(viewModel = viewModel)
                 AppTab.HISTORY -> TransactionHistoryScreen(viewModel = viewModel)
-                AppTab.WALLET -> WalletScreen(viewModel = viewModel)
+                AppTab.WALLET -> WalletScreen(viewModel = viewModel, currentLanguage = currentLanguage)
                 AppTab.PERFORMANCE -> PerformanceScreen(viewModel = viewModel)
-                AppTab.SUBSCRIPTIONS -> SubscriptionsScreen(viewModel = viewModel)
-                AppTab.HELP -> HelpGuideScreen()
+                AppTab.SUBSCRIPTIONS -> SubscriptionsScreen(viewModel = viewModel, currentLanguage = currentLanguage)
+                AppTab.HELP -> HelpGuideScreen(currentLanguage = currentLanguage)
                 AppTab.ADMIN -> AdminScreen(viewModel = viewModel, currentLanguage = currentLanguage)
             }
         }
