@@ -1,384 +1,348 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.model.ManagedUserItem
-import com.example.ui.components.MetricStatCard
-import com.example.ui.theme.BorderStrokeColor
-import com.example.ui.theme.BrightGold
-import com.example.ui.theme.DarkCardElevated
-import com.example.ui.theme.DarkCardSurface
-import com.example.ui.theme.DarkNavyBg
-import com.example.ui.theme.HammerLongGreen
-import com.example.ui.theme.NeonEmerald
-import com.example.ui.theme.NeonMint
-import com.example.ui.theme.RoyalPurple
-import com.example.ui.theme.StarShortRed
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
-import com.example.ui.viewmodel.MainViewModel
 
+enum class AppLanguage(val code: String, val title: String, val isRtl: Boolean, val currency: String) {
+    FA("fa", "فارسی", true, "تومان"),
+    EN("en", "English", false, "USDT"),
+    AR("ar", "العربية", true, "USDT"),
+    DE("de", "Deutsch", false, "USDT"),
+    FR("fr", "Français", false, "USDT")
+}
+
+data class RealUserAccount(
+    val id: String,
+    val username: String,
+    val plan: String,
+    val capitalIrr: String,
+    val capitalUsd: String,
+    val profitShare: String,
+    val activeExchanges: List<String>,
+    val status: String
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminScreen(
-    viewModel: MainViewModel,
-    modifier: Modifier = Modifier
+    onNavigateBack: () -> Unit = {},
+    onRestartDaemon: () -> Unit = {}
 ) {
-    val adminData by viewModel.adminData.collectAsState()
-    val isAlive by viewModel.isRadarPulseAlive.collectAsState()
+    var currentLang by remember { mutableStateOf(AppLanguage.FA) }
+    var panicTriggered by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableStateOf(0) }
 
-    var selectedUserForPlanChange by remember { mutableStateOf<ManagedUserItem?>(null) }
+    val layoutDirection = if (currentLang.isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
 
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .background(DarkNavyBg)
-            .padding(horizontal = 12.dp)
-            .testTag("admin_screen"),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // Admin Master Header
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "COMMAND CENTER 👑",
-                    color = BrightGold,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 1.sp
+    val userList = remember {
+        listOf(
+            RealUserAccount(
+                id = "1",
+                username = "hamid1365@",
+                plan = "VIP / ELITE",
+                capitalIrr = "۱۵۰,۰۰۰,۰۰۰ تومان",
+                capitalUsd = "$2,500",
+                profitShare = "2.5% Success Fee",
+                activeExchanges = listOf("Wallex", "BingX", "Binance"),
+                status = "Active / Online"
+            ),
+            RealUserAccount(
+                id = "2",
+                username = "masjedi6913@",
+                plan = "PRO MAX",
+                capitalIrr = "۸۰,۰۰۰,۰۰۰ تومان",
+                capitalUsd = "$1,350",
+                profitShare = "2.5% Success Fee",
+                activeExchanges = listOf("Nobitex", "CoinEx"),
+                status = "Active / Online"
+            )
+        )
+    }
+
+    CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
+        Scaffold(
+            containerColor = Color(0xFF0D1117),
+            topBar = {
+                TopAppBar(
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF161B22)),
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .background(Color(0xFF00E676), CircleShape)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "HM HAMMER PRO",
+                                color = Color(0xFF00E676),
+                                fontWeight = FontWeight.Black,
+                                fontSize = 18.sp
+                            )
+                        }
+                    },
+                    actions = {
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(end = 8.dp)
+                        ) {
+                            items(AppLanguage.values()) { lang ->
+                                val isSelected = lang == currentLang
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) Color(0xFF00E676) else Color(0xFF21262D),
+                                    modifier = Modifier.clickable { currentLang = lang }
+                                ) {
+                                    Text(
+                                        text = lang.title,
+                                        color = if (isSelected) Color.Black else Color.White,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
                 )
-
-                Box(
-                    modifier = Modifier
-                        .background(BrightGold.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
-                        .border(1.dp, BrightGold, RoundedCornerShape(6.dp))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                ) {
-                    Text(
-                        text = "ADMIN ACCESS",
-                        color = BrightGold,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 0.5.sp,
-                        fontFamily = FontFamily.Monospace
-                    )
+            }
+        ) { padding ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // هشدار امنیتی غیرحضانتی (Non-Custodial Banner)
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1F2937)),
+                        border = BorderStroke(1.dp, Color(0xFF10B981)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = Color(0xFF10B981),
+                                modifier = Modifier.size(28.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = if (currentLang == AppLanguage.FA) "امنیت ۱۰۰٪ غیرحضانتی (Non-Custodial)" else "100% Non-Custodial Architecture",
+                                    color = Color(0xFF10B981),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp
+                                )
+                                Text(
+                                    text = if (currentLang == AppLanguage.FA)
+                                        "دارایی شما در کیف‌پول صرافی باقی می‌ماند. ربات دسترسی برداشت ندارد و کلیدها با AES-256 در موبایل رمزنگاری می‌شوند."
+                                    else
+                                        "Funds stay safely in your exchange account. Zero withdrawal access. Local client-side encrypted keys.",
+                                    color = Color.LightGray,
+                                    fontSize = 11.sp,
+                                    lineHeight = 15.sp
+                                )
+                            }
+                        }
+                    }
                 }
-            }
-        }
 
-        // 4 KPI Summary Cards
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                MetricStatCard(
-                    title = "TOTAL USERS",
-                    value = "${adminData.totalUsers}",
-                    valueColor = TextPrimary,
-                    modifier = Modifier.weight(1f)
-                )
-                MetricStatCard(
-                    title = "ACTIVE BOTS",
-                    value = "${adminData.activeBots}",
-                    valueColor = NeonEmerald,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                MetricStatCard(
-                    title = "DEPLOYED CAPITAL",
-                    value = adminData.totalInvested,
-                    valueColor = BrightGold,
-                    modifier = Modifier.weight(1f)
-                )
-                MetricStatCard(
-                    title = "REAL WALLEX VOL",
-                    value = adminData.turnover,
-                    valueColor = NeonMint,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-
-        // Server System Control Box
-        item {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(DarkCardSurface, RoundedCornerShape(16.dp))
-                    .border(1.dp, BorderStrokeColor, RoundedCornerShape(16.dp))
-                    .padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "LINUX ENGINE SYSTEM DAEMON",
-                        color = TextPrimary,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 1.2.sp
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .background(if (isAlive) NeonEmerald else StarShortRed, CircleShape)
-                        )
+                // کلید توقف اضطراری (Emergency Panic)
+                item {
+                    Button(
+                        onClick = { panicTriggered = !panicTriggered },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (panicTriggered) Color(0xFFDC2626) else Color(0xFF7F1D1D)
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth().height(46.dp)
+                    ) {
+                        Icon(Icons.Default.Warning, contentDescription = null, tint = Color.White)
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (isAlive) " ONLINE" else " RESTARTING...",
-                            color = if (isAlive) NeonEmerald else StarShortRed,
-                            fontSize = 10.sp,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold
+                            text = if (panicTriggered)
+                                (if (currentLang == AppLanguage.FA) "دستور لغو اردرها ارسال شد" else "EMERGENCY PANIC ACTIVATED")
+                            else
+                                (if (currentLang == AppLanguage.FA) "دکمه توقف اضطراری و بستن پوزیشن‌ها" else "EMERGENCY PANIC - CLOSE ALL POSITIONS"),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            color = Color.White
                         )
                     }
                 }
 
-                Text(
-                    text = "System command orchestrator:\nsystemctl restart hmserver hmbot nginx",
-                    color = TextMuted,
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace,
-                    lineHeight = 15.sp
-                )
-
-                Button(
-                    onClick = { viewModel.restartEngine() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(42.dp)
-                        .testTag("admin_restart_engine_button"),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = DarkCardElevated,
-                        contentColor = NeonMint
-                    ),
-                    shape = RoundedCornerShape(10.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonMint.copy(alpha = 0.5f))
-                ) {
+                // پلن‌های شفاف سرمایه‌گذاری
+                item {
                     Text(
-                        text = "🔄 RESTART & RE-SYNC ANALYTIC DAEMON",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 0.5.sp
+                        text = if (currentLang == AppLanguage.FA) "پلن‌های اشتراک + مدل ۲.۵٪ سهم از سود" else "Subscription Tiers & 2.5% Profit Sharing",
+                        color = Color(0xFFFFB703),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        PlanSummaryCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Standard",
+                            price = if (currentLang == AppLanguage.FA) "۱.۵ م ت" else "$25",
+                            cap = "< $1,000",
+                            badgeColor = Color(0xFF38BDF8)
+                        )
+                        PlanSummaryCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Pro Scalp",
+                            price = if (currentLang == AppLanguage.FA) "۳.۸ م ت" else "$60",
+                            cap = "< $10,000",
+                            badgeColor = Color(0xFF818CF8)
+                        )
+                        PlanSummaryCard(
+                            modifier = Modifier.weight(1f),
+                            title = "VIP Elite",
+                            price = if (currentLang == AppLanguage.FA) "۱۹ م ت" else "$300",
+                            cap = "Unlimited",
+                            badgeColor = Color(0xFFF59E0B)
+                        )
+                    }
+                }
+
+                // لیست صرافی‌های متصل (داخلی و خارجی)
+                item {
+                    Text(
+                        text = if (currentLang == AppLanguage.FA) "صرافی‌های متصل (اسپات / فیوچرز)" else "Supported Exchanges (Spot / Futures)",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        val exchanges = listOf("Nobitex", "Wallex", "Bitpin", "BingX", "CoinEx", "Binance", "Bybit", "OKX")
+                        items(exchanges) { ex ->
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = Color(0xFF21262D),
+                                border = BorderStroke(1.dp, Color(0xFF30363D))
+                            ) {
+                                Text(
+                                    text = ex,
+                                    color = Color(0xFF58A6FF),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // اکانت‌های واقعی متصل
+                item {
+                    Text(
+                        text = if (currentLang == AppLanguage.FA) "حساب‌های فعال مدیران" else "Active Management Accounts",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
                     )
                 }
-            }
-        }
 
-        // Users Management List Header
-        item {
-            Text(
-                text = "USER ACCOUNTS & SUBSCRIPTION TIERS",
-                color = TextMuted,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.2.sp,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-        }
-
-        items(adminData.users) { user ->
-            AdminUserCard(
-                user = user,
-                onChangePlanClick = { selectedUserForPlanChange = user }
-            )
-        }
-
-        item { Spacer(modifier = Modifier.height(16.dp)) }
-    }
-
-    // Plan Change Dialog
-    if (selectedUserForPlanChange != null) {
-        val u = selectedUserForPlanChange!!
-        AlertDialog(
-            onDismissRequest = { selectedUserForPlanChange = null },
-            title = {
-                Text(
-                    text = "CHANGE PLAN FOR @${u.user}",
-                    color = TextPrimary,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 0.5.sp
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("VIP", "ELITE", "PRO", "STANDARD").forEach { plan ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(DarkNavyBg, RoundedCornerShape(8.dp))
-                                .border(1.dp, if (u.plan == plan) NeonMint else BorderStrokeColor, RoundedCornerShape(8.dp))
-                                .clickable {
-                                    viewModel.adminChangeUserPlan(u.id, plan)
-                                    selectedUserForPlanChange = null
+                items(userList) { user ->
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+                        border = BorderStroke(1.dp, Color(0xFF30363D)),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(text = user.username, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = Color(0xFF00E676).copy(alpha = 0.15f)
+                                ) {
+                                    Text(
+                                        text = user.plan,
+                                        color = Color(0xFF00E676),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
                                 }
-                                .padding(12.dp)
-                        ) {
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = "PLAN $plan ${if (u.plan == plan) "(CURRENT)" else ""}",
-                                color = if (u.plan == plan) NeonMint else TextSecondary,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 0.5.sp
+                                text = "سرمایه تحت مدیریت: ${if (currentLang == AppLanguage.FA) user.capitalIrr else user.capitalUsd}",
+                                color = Color.LightGray,
+                                fontSize = 11.sp
+                            )
+                            Text(
+                                text = "صرافی‌ها: ${user.activeExchanges.joinToString(", ")}",
+                                color = Color(0xFF8B949E),
+                                fontSize = 11.sp
                             )
                         }
                     }
                 }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { selectedUserForPlanChange = null }) {
-                    Text("CANCEL", color = TextMuted, fontWeight = FontWeight.Bold)
-                }
-            },
-            containerColor = DarkCardSurface,
-            shape = RoundedCornerShape(16.dp)
-        )
+            }
+        }
     }
 }
 
 @Composable
-fun AdminUserCard(
-    user: ManagedUserItem,
-    onChangePlanClick: () -> Unit
+fun PlanSummaryCard(
+    modifier: Modifier = Modifier,
+    title: String,
+    price: String,
+    cap: String,
+    badgeColor: Color
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(DarkCardSurface, RoundedCornerShape(12.dp))
-            .border(1.dp, BorderStrokeColor, RoundedCornerShape(12.dp))
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+        border = BorderStroke(1.dp, badgeColor.copy(alpha = 0.5f)),
+        shape = RoundedCornerShape(8.dp)
     ) {
-        Column(modifier = Modifier.weight(1.3f)) {
-            Text(
-                text = "@${user.user}",
-                color = TextPrimary,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Black
-            )
-            Text(
-                text = "CAPITAL: ${user.credit}",
-                color = TextMuted,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = "STATUS: ${user.status.uppercase()}",
-                color = if (user.isActive) NeonEmerald else TextMuted,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
-            Box(
-                modifier = Modifier
-                    .background(
-                        when (user.plan) {
-                            "VIP" -> BrightGold.copy(alpha = 0.15f)
-                            "ELITE" -> RoyalPurple.copy(alpha = 0.15f)
-                            "PRO" -> NeonMint.copy(alpha = 0.15f)
-                            else -> TextMuted.copy(alpha = 0.15f)
-                        },
-                        RoundedCornerShape(6.dp)
-                    )
-                    .border(
-                        0.8.dp,
-                        when (user.plan) {
-                            "VIP" -> BrightGold
-                            "ELITE" -> RoyalPurple
-                            "PRO" -> NeonMint
-                            else -> BorderStrokeColor
-                        },
-                        RoundedCornerShape(6.dp)
-                    )
-                    .padding(horizontal = 8.dp, vertical = 2.dp)
-            ) {
-                Text(
-                    text = user.plan,
-                    color = when (user.plan) {
-                        "VIP" -> BrightGold
-                        "ELITE" -> RoyalPurple
-                        "PRO" -> NeonMint
-                        else -> TextMuted
-                    },
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 0.5.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Button(
-                onClick = onChangePlanClick,
-                modifier = Modifier
-                    .height(30.dp)
-                    .testTag("change_plan_btn_${user.id}"),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = DarkCardElevated,
-                    contentColor = TextPrimary
-                ),
-                shape = RoundedCornerShape(6.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, BorderStrokeColor)
-            ) {
-                Text(text = "CHANGE PLAN", fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
-            }
+        Column(
+            modifier = Modifier.padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = title, color = badgeColor, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = price, color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
+            Text(text = cap, color = Color.Gray, fontSize = 9.sp)
         }
     }
 }
-
