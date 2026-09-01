@@ -1,126 +1,129 @@
 package com.example.ui.components
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.BorderStrokeColor
-import com.example.ui.theme.DarkCardElevated
-import com.example.ui.theme.NeonEmerald
-import com.example.ui.theme.NeonMint
-import com.example.ui.theme.StarShortRed
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
+
+enum class LanguageOption(val code: String, val title: String) {
+    FA("fa", "فارسی"),
+    EN("en", "English"),
+    AR("ar", "العربية")
+}
 
 @Composable
 fun HeaderPulseBar(
-    isAlive: Boolean,
-    modifier: Modifier = Modifier
+    isPulseAlive: Boolean = true,
+    currentLanguage: LanguageOption = LanguageOption.FA,
+    onLanguageSelected: (LanguageOption) -> Unit = {}
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 800),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulse_alpha"
-    )
+    var langMenuExpanded by remember { mutableStateOf(false) }
 
     Row(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 6.dp)
-            .testTag("header_pulse_bar"),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        // Branding and Live Engine Indicator
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    text = "HM HAMMER",
-                    color = NeonMint,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = (-0.8).sp,
-                    lineHeight = 22.sp
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "v2.0",
-                    color = TextPrimary,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = (-0.5).sp
-                )
+        // منوی کشویی زبان به جای دکمه دایره‌ای ادمین
+        Box {
+            Surface(
+                color = Color(0xFF21262D),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.clickable { langMenuExpanded = true }
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Language,
+                        contentDescription = "Language",
+                        tint = Color(0xFF00E676),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = currentLanguage.title,
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
 
-            // Live Engine Pulse Badge
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            DropdownMenu(
+                expanded = langMenuExpanded,
+                onDismissRequest = { langMenuExpanded = false },
+                modifier = Modifier.background(Color(0xFF161B22))
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(7.dp)
-                        .alpha(if (isAlive) pulseAlpha else 0.4f)
-                        .background(
-                            if (isAlive) NeonEmerald else StarShortRed,
-                            CircleShape
-                        )
-                )
-                Text(
-                    text = if (isAlive) "ENGINE ACTIVE" else "RADAR OFFLINE",
-                    color = if (isAlive) NeonEmerald else StarShortRed,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.5.sp
-                )
+                LanguageOption.values().forEach { lang ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = lang.title,
+                                color = if (currentLanguage == lang) Color(0xFF00E676) else Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        },
+                        onClick = {
+                            onLanguageSelected(lang)
+                            langMenuExpanded = false
+                        }
+                    )
+                }
             }
         }
 
-        // Circular Admin Pill Badge
-        Box(
-            modifier = Modifier
-                .size(38.dp)
-                .background(DarkCardElevated, CircleShape)
-                .border(1.dp, BorderStrokeColor, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "ADMIN",
-                color = TextMuted,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.5.sp
-            )
+        // بخش برند و وضعیت موتور معاملاتی
+        Column(horizontalAlignment = Alignment.End) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "v2.0 ",
+                    color = Color.Gray,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "HM HAMMER",
+                    color = Color(0xFF00E676),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Black
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = if (currentLanguage == LanguageOption.FA) "موتور معاملاتی فعال " else if (currentLanguage == LanguageOption.AR) "محرك التداول نشط " else "ENGINE ACTIVE ",
+                    color = Color(0xFF00E676),
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .background(if (isPulseAlive) Color(0xFF00E676) else Color(0xFFDC2626), CircleShape)
+                )
+            }
         }
     }
 }
-
