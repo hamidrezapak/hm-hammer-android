@@ -2,7 +2,6 @@ package com.example.ui.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,11 +15,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,11 +45,11 @@ data class RealUserAccount(
 @Composable
 fun AdminScreen(
     onNavigateBack: () -> Unit = {},
-    onRestartDaemon: () -> Unit = {}
+    onRestartDaemon: () -> Unit = {},
+    viewModel: Any? = null
 ) {
     var currentLang by remember { mutableStateOf(AppLanguage.FA) }
     var panicTriggered by remember { mutableStateOf(false) }
-    var selectedTab by remember { mutableStateOf(0) }
 
     val layoutDirection = if (currentLang.isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
 
@@ -136,7 +133,7 @@ fun AdminScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // هشدار امنیتی غیرحضانتی (Non-Custodial Banner)
+                // تاییدیه امنیت غیرحضانتی
                 item {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = Color(0xFF1F2937)),
@@ -163,9 +160,9 @@ fun AdminScreen(
                                 )
                                 Text(
                                     text = if (currentLang == AppLanguage.FA)
-                                        "دارایی شما در کیف‌پول صرافی باقی می‌ماند. ربات دسترسی برداشت ندارد و کلیدها با AES-256 در موبایل رمزنگاری می‌شوند."
+                                        "دارایی در صرافی خودتان است. ربات دسترسی برداشت ندارد و کلیدها محلی رمزنگاری می‌شوند."
                                     else
-                                        "Funds stay safely in your exchange account. Zero withdrawal access. Local client-side encrypted keys.",
+                                        "Zero withdrawal access. Funds stay safely in your exchange account with local AES-256 encryption.",
                                     color = Color.LightGray,
                                     fontSize = 11.sp,
                                     lineHeight = 15.sp
@@ -175,7 +172,7 @@ fun AdminScreen(
                     }
                 }
 
-                // کلید توقف اضطراری (Emergency Panic)
+                // دکمه توقف اضطراری (Panic Button)
                 item {
                     Button(
                         onClick = { panicTriggered = !panicTriggered },
@@ -189,9 +186,9 @@ fun AdminScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = if (panicTriggered)
-                                (if (currentLang == AppLanguage.FA) "دستور لغو اردرها ارسال شد" else "EMERGENCY PANIC ACTIVATED")
+                                (if (currentLang == AppLanguage.FA) "دستور لغو تمام اردرها ارسال شد" else "PANIC TRIGGERED - ORDERS CANCELED")
                             else
-                                (if (currentLang == AppLanguage.FA) "دکمه توقف اضطراری و بستن پوزیشن‌ها" else "EMERGENCY PANIC - CLOSE ALL POSITIONS"),
+                                (if (currentLang == AppLanguage.FA) "دکمه توقف اضطراری و بستن پوزیشن‌ها" else "EMERGENCY PANIC - CLOSE ALL"),
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp,
                             color = Color.White
@@ -199,10 +196,10 @@ fun AdminScreen(
                     }
                 }
 
-                // پلن‌های شفاف سرمایه‌گذاری
+                // پلن‌های شفاف
                 item {
                     Text(
-                        text = if (currentLang == AppLanguage.FA) "پلن‌های اشتراک + مدل ۲.۵٪ سهم از سود" else "Subscription Tiers & 2.5% Profit Sharing",
+                        text = if (currentLang == AppLanguage.FA) "پلن‌های اشتراک + کارمزد ۲.۵٪ سود" else "Subscription Plans & 2.5% Profit Sharing",
                         color = Color(0xFFFFB703),
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
@@ -236,10 +233,10 @@ fun AdminScreen(
                     }
                 }
 
-                // لیست صرافی‌های متصل (داخلی و خارجی)
+                // صرافی‌های معتبر
                 item {
                     Text(
-                        text = if (currentLang == AppLanguage.FA) "صرافی‌های متصل (اسپات / فیوچرز)" else "Supported Exchanges (Spot / Futures)",
+                        text = if (currentLang == AppLanguage.FA) "صرافی‌های پشتیبانی‌شده" else "Supported Exchanges",
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
@@ -265,10 +262,10 @@ fun AdminScreen(
                     }
                 }
 
-                // اکانت‌های واقعی متصل
+                // مدیریت حساب‌ها
                 item {
                     Text(
-                        text = if (currentLang == AppLanguage.FA) "حساب‌های فعال مدیران" else "Active Management Accounts",
+                        text = if (currentLang == AppLanguage.FA) "حساب‌های فعال مدیران" else "Active Master Accounts",
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
