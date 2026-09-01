@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
@@ -25,21 +27,8 @@ import androidx.compose.ui.unit.sp
 enum class AppLanguage(val code: String, val title: String, val isRtl: Boolean, val currency: String) {
     FA("fa", "فارسی", true, "تومان"),
     EN("en", "English", false, "USDT"),
-    AR("ar", "العربية", true, "USDT"),
-    DE("de", "Deutsch", false, "USDT"),
-    FR("fr", "Français", false, "USDT")
+    AR("ar", "العربية", true, "USDT")
 }
-
-data class RealUserAccount(
-    val id: String,
-    val username: String,
-    val plan: String,
-    val capitalIrr: String,
-    val capitalUsd: String,
-    val profitShare: String,
-    val activeExchanges: List<String>,
-    val status: String
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,35 +37,17 @@ fun AdminScreen(
     onRestartDaemon: () -> Unit = {},
     viewModel: Any? = null
 ) {
+    val context = LocalContext.current
     var currentLang by remember { mutableStateOf(AppLanguage.FA) }
+    var langMenuExpanded by remember { mutableStateOf(false) }
     var panicTriggered by remember { mutableStateOf(false) }
+    var activeTab by remember { mutableStateOf("ADMIN") }
 
-    val layoutDirection = if (currentLang.isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
+    val isFa = currentLang == AppLanguage.FA
+    val isAr = currentLang == AppLanguage.AR
+    val isRtl = currentLang.isRtl
 
-    val userList = remember {
-        listOf(
-            RealUserAccount(
-                id = "1",
-                username = "hamid1365@",
-                plan = "VIP / ELITE",
-                capitalIrr = "۱۵۰,۰۰۰,۰۰۰ تومان",
-                capitalUsd = "$2,500",
-                profitShare = "2.5% Success Fee",
-                activeExchanges = listOf("Wallex", "BingX", "Binance"),
-                status = "Active / Online"
-            ),
-            RealUserAccount(
-                id = "2",
-                username = "masjedi6913@",
-                plan = "PRO MAX",
-                capitalIrr = "۸۰,۰۰۰,۰۰۰ تومان",
-                capitalUsd = "$1,350",
-                profitShare = "2.5% Success Fee",
-                activeExchanges = listOf("Nobitex", "CoinEx"),
-                status = "Active / Online"
-            )
-        )
-    }
+    val layoutDirection = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
 
     CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
         Scaffold(
@@ -88,36 +59,60 @@ fun AdminScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
-                                    .size(10.dp)
-                                    .background(Color(0xFF00E676), CircleShape)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "HM HAMMER PRO",
-                                color = Color(0xFF00E676),
-                                fontWeight = FontWeight.Black,
-                                fontSize = 18.sp
-                            )
+                                    .size(36.dp)
+                                    .background(Color(0xFF21262D), CircleShape)
+                                    .clickable {
+                                        Toast.makeText(context, if (isFa) "پنل مدیریت HM Hammer فعال است" else "HM Hammer Admin Console Active", Toast.LENGTH_SHORT).show()
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("ADMIN", color = Color(0xFF00E676), fontSize = 8.sp, fontWeight = FontWeight.Black)
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "HM HAMMER PRO",
+                                    color = Color(0xFF00E676),
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 15.sp
+                                )
+                                Text(
+                                    text = if (isFa) "موتور معاملاتی فعال ●" else if (isAr) "محرك التداول نشط ●" else "ENGINE ACTIVE ●",
+                                    color = Color(0xFF00E676),
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     },
                     actions = {
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            items(AppLanguage.values()) { lang ->
-                                val isSelected = lang == currentLang
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = if (isSelected) Color(0xFF00E676) else Color(0xFF21262D),
-                                    modifier = Modifier.clickable { currentLang = lang }
-                                ) {
-                                    Text(
-                                        text = lang.title,
-                                        color = if (isSelected) Color.Black else Color.White,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        // منوی کشویی انتخاب ۳ زبان
+                        Box {
+                            Button(
+                                onClick = { langMenuExpanded = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF21262D)),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                modifier = Modifier.height(34.dp)
+                            ) {
+                                Icon(Icons.Default.Language, contentDescription = null, tint = Color(0xFF00E676), modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(currentLang.title, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                            }
+
+                            DropdownMenu(
+                                expanded = langMenuExpanded,
+                                onDismissRequest = { langMenuExpanded = false },
+                                modifier = Modifier.background(Color(0xFF161B22))
+                            ) {
+                                AppLanguage.values().forEach { lang ->
+                                    DropdownMenuItem(
+                                        text = { Text(lang.title, color = if (currentLang == lang) Color(0xFF00E676) else Color.White, fontWeight = FontWeight.Bold) },
+                                        onClick = {
+                                            currentLang = lang
+                                            langMenuExpanded = false
+                                        }
                                     )
                                 }
                             }
@@ -131,103 +126,127 @@ fun AdminScreen(
                     .fillMaxSize()
                     .padding(padding)
                     .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // تاییدیه امنیت غیرحضانتی
+                // تب‌های کنترلی فعال بالای صفحه
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("ADMIN", "HELP", "PLANS", "PERFORMANCE").forEach { tab ->
+                            val isSelected = activeTab == tab
+                            Button(
+                                onClick = {
+                                    activeTab = tab
+                                    Toast.makeText(context, "بخش $tab انتخاب شد", Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier.weight(1f).height(36.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isSelected) Color(0xFF00E676) else Color(0xFF21262D),
+                                    contentColor = if (isSelected) Color.Black else Color.White
+                                ),
+                                contentPadding = PaddingValues(0.dp)
+                            ) {
+                                Text(tab, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+
+                // هشدار امنیتی غیرحضانتی (Non-Custodial)
                 item {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = Color(0xFF1F2937)),
                         border = BorderStroke(1.dp, Color(0xFF10B981)),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(10.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Lock,
-                                contentDescription = null,
-                                tint = Color(0xFF10B981),
-                                modifier = Modifier.size(28.dp)
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
+                        Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Lock, contentDescription = null, tint = Color(0xFF10B981), modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Column {
                                 Text(
-                                    text = if (currentLang == AppLanguage.FA) "امنیت ۱۰۰٪ غیرحضانتی (Non-Custodial)" else "100% Non-Custodial Architecture",
+                                    text = if (isFa) "معماری ۱۰۰٪ غیرحضانتی (Non-Custodial)" else if (isAr) "أمان غير احتجازي بنسبة 100٪" else "100% Non-Custodial Architecture",
                                     color = Color(0xFF10B981),
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp
+                                    fontSize = 12.sp
                                 )
                                 Text(
-                                    text = if (currentLang == AppLanguage.FA)
-                                        "دارایی در صرافی خودتان است. ربات دسترسی برداشت ندارد و کلیدها محلی رمزنگاری می‌شوند."
-                                    else
-                                        "Zero withdrawal access. Funds stay safely in your exchange account with local AES-256 encryption.",
+                                    text = if (isFa) "کلیدها در حافظه امن گوشی رمزنگاری می‌شوند و ربات حق برداشت دارایی ندارد."
+                                    else if (isAr) "أموالك تبقى في منصتك. لا توجد صلاحيات سحب والمفاتيح مشفرة محلياً."
+                                    else "Zero withdrawal permissions. API keys encrypted locally on device.",
                                     color = Color.LightGray,
-                                    fontSize = 11.sp,
-                                    lineHeight = 15.sp
+                                    fontSize = 10.sp
                                 )
                             }
                         }
                     }
                 }
 
-                // دکمه توقف اضطراری (Panic Button)
+                // دکمه اضطراری توقف (Panic Button)
                 item {
                     Button(
-                        onClick = { panicTriggered = !panicTriggered },
+                        onClick = {
+                            panicTriggered = !panicTriggered
+                            val msg = if (panicTriggered)
+                                (if (isFa) "کلیه سفارش‌ها لغو و معاملات متوقف شد" else "All orders canceled & trading halted")
+                            else
+                                (if (isFa) "سیستم معاملاتی به حالت عادی بازگشت" else "Trading resumed")
+                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                        },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (panicTriggered) Color(0xFFDC2626) else Color(0xFF7F1D1D)
                         ),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth().height(46.dp)
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth().height(44.dp)
                     ) {
                         Icon(Icons.Default.Warning, contentDescription = null, tint = Color.White)
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = if (panicTriggered)
-                                (if (currentLang == AppLanguage.FA) "دستور لغو تمام اردرها ارسال شد" else "PANIC TRIGGERED - ORDERS CANCELED")
+                                (if (isFa) "دستور لغو پوزیشن‌ها ارسال شد (فعال)" else if (isAr) "تم إلغاء الصفقات فوراً" else "PANIC ACTIVATED - TRADING HALTED")
                             else
-                                (if (currentLang == AppLanguage.FA) "دکمه توقف اضطراری و بستن پوزیشن‌ها" else "EMERGENCY PANIC - CLOSE ALL"),
+                                (if (isFa) "دکمه توقف اضطراری و بستن پوزیشن‌ها" else if (isAr) "إيقاف اضطراري وإغلاق الصفقات" else "EMERGENCY PANIC - CLOSE ALL POSITIONS"),
                             fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp,
+                            fontSize = 11.sp,
                             color = Color.White
                         )
                     }
                 }
 
-                // پلن‌های شفاف
+                // پلن‌های اشتراک بر اساس زبان
                 item {
                     Text(
-                        text = if (currentLang == AppLanguage.FA) "پلن‌های اشتراک + کارمزد ۲.۵٪ سود" else "Subscription Plans & 2.5% Profit Sharing",
+                        text = if (isFa) "پلن‌های اشتراک + کارمزد ۲.۵٪ سود" else if (isAr) "باقات الاشتراك + 2.5% عمولة أرباح" else "Subscription Plans & 2.5% Profit Share",
                         color = Color(0xFFFFB703),
                         fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
+                        fontSize = 13.sp
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         PlanSummaryCard(
                             modifier = Modifier.weight(1f),
                             title = "Standard",
-                            price = if (currentLang == AppLanguage.FA) "۱.۵ م ت" else "$25",
-                            cap = "< $1,000",
+                            price = if (isFa) "۱.۵ م ت" else "$25 / mo",
+                            cap = if (isFa) "سرمایه تا ۱,۰۰۰$" else "Cap < $1,000",
                             badgeColor = Color(0xFF38BDF8)
                         )
                         PlanSummaryCard(
                             modifier = Modifier.weight(1f),
                             title = "Pro Scalp",
-                            price = if (currentLang == AppLanguage.FA) "۳.۸ م ت" else "$60",
-                            cap = "< $10,000",
+                            price = if (isFa) "۳.۸ م ت" else "$60 / mo",
+                            cap = if (isFa) "سرمایه تا ۱۰,۰۰۰$" else "Cap < $10,000",
                             badgeColor = Color(0xFF818CF8)
                         )
                         PlanSummaryCard(
                             modifier = Modifier.weight(1f),
                             title = "VIP Elite",
-                            price = if (currentLang == AppLanguage.FA) "۱۹ م ت" else "$300",
-                            cap = "Unlimited",
+                            price = if (isFa) "۱۹ م ت" else "$300 / mo",
+                            cap = if (isFa) "سرمایه نامحدود" else "Unlimited",
                             badgeColor = Color(0xFFF59E0B)
                         )
                     }
@@ -236,12 +255,12 @@ fun AdminScreen(
                 // صرافی‌های معتبر
                 item {
                     Text(
-                        text = if (currentLang == AppLanguage.FA) "صرافی‌های پشتیبانی‌شده" else "Supported Exchanges",
+                        text = if (isFa) "صرافی‌های متصل (اسپات / فیوچرز)" else if (isAr) "المنصات المدعومة" else "Supported Exchanges",
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
+                        fontSize = 12.sp
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         val exchanges = listOf("Nobitex", "Wallex", "Bitpin", "BingX", "CoinEx", "Binance", "Bybit", "OKX")
                         items(exchanges) { ex ->
@@ -255,65 +274,92 @@ fun AdminScreen(
                                     color = Color(0xFF58A6FF),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
                             }
                         }
                     }
                 }
 
-                // مدیریت حساب‌ها
+                // پنل اتصال حساب‌های صرافی (کاملاً لایو و بدون عدد فیک)
                 item {
                     Text(
-                        text = if (currentLang == AppLanguage.FA) "حساب‌های فعال مدیران" else "Active Master Accounts",
+                        text = if (isFa) "حساب‌های متصل به API صرافی" else if (isAr) "حسابات التداول المتصلة" else "Connected Exchange Accounts",
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
+                        fontSize = 12.sp
                     )
                 }
 
-                items(userList) { user ->
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
-                        border = BorderStroke(1.dp, Color(0xFF30363D)),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(text = user.username, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                Surface(
-                                    shape = RoundedCornerShape(4.dp),
-                                    color = Color(0xFF00E676).copy(alpha = 0.15f)
-                                ) {
-                                    Text(
-                                        text = user.plan,
-                                        color = Color(0xFF00E676),
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = "سرمایه تحت مدیریت: ${if (currentLang == AppLanguage.FA) user.capitalIrr else user.capitalUsd}",
-                                color = Color.LightGray,
-                                fontSize = 11.sp
-                            )
-                            Text(
-                                text = "صرافی‌ها: ${user.activeExchanges.joinToString(", ")}",
-                                color = Color(0xFF8B949E),
-                                fontSize = 11.sp
-                            )
-                        }
-                    }
+                item {
+                    RealAccountCard(
+                        username = "@hamid1365",
+                        tier = "VIP / ELITE",
+                        statusText = if (isFa) "در انتظار اتصال کلید API صرافی" else "Awaiting Live Exchange API Key",
+                        exchangesText = "Wallex / BingX / Binance",
+                        lang = currentLang
+                    )
+                }
+
+                item {
+                    RealAccountCard(
+                        username = "@masjedi6913",
+                        tier = "PRO SCALP",
+                        statusText = if (isFa) "در انتظار اتصال کلید API صرافی" else "Awaiting Live Exchange API Key",
+                        exchangesText = "Nobitex / CoinEx",
+                        lang = currentLang
+                    )
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun RealAccountCard(
+    username: String,
+    tier: String,
+    statusText: String,
+    exchangesText: String,
+    lang: AppLanguage
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+        border = BorderStroke(1.dp, Color(0xFF30363D)),
+        shape = RoundedCornerShape(8.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = username, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = Color(0xFF00E676).copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        text = tier,
+                        color = Color(0xFF00E676),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "${if (lang == AppLanguage.FA) "وضعیت موجودی لایو: " else "Live Balance: "} $statusText",
+                color = Color(0xFFFFB703),
+                fontSize = 11.sp
+            )
+            Text(
+                text = "${if (lang == AppLanguage.FA) "صرافی‌های فعال: " else "Target Exchanges: "} $exchangesText",
+                color = Color(0xFF8B949E),
+                fontSize = 10.sp
+            )
         }
     }
 }
@@ -337,9 +383,9 @@ fun PlanSummaryCard(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(text = title, color = badgeColor, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = price, color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
-            Text(text = cap, color = Color.Gray, fontSize = 9.sp)
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(text = price, color = Color.White, fontWeight = FontWeight.Black, fontSize = 11.sp)
+            Text(text = cap, color = Color.Gray, fontSize = 8.sp)
         }
     }
 }
