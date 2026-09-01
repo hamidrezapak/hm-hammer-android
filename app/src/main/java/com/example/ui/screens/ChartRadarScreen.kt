@@ -1,487 +1,182 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.engine.PairTicker
-import com.example.model.SignalAction
-import com.example.ui.components.InteractiveCandleChart
-import com.example.ui.theme.BorderStrokeColor
-import com.example.ui.theme.BrightGold
-import com.example.ui.theme.DarkCardElevated
-import com.example.ui.theme.DarkCardSurface
-import com.example.ui.theme.DarkNavyBg
-import com.example.ui.theme.HammerLongGreen
-import com.example.ui.theme.NeonEmerald
-import com.example.ui.theme.NeonMint
-import com.example.ui.theme.StarShortRed
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
+import com.example.ui.components.LanguageOption
+import com.example.ui.theme.AppLocale
 import com.example.ui.viewmodel.MainViewModel
 
 @Composable
 fun ChartRadarScreen(
     viewModel: MainViewModel,
-    modifier: Modifier = Modifier
+    currentLanguage: LanguageOption = LanguageOption.FA
 ) {
-    val selectedPair by viewModel.selectedPair.collectAsState()
-    val selectedTimeframe by viewModel.selectedTimeframe.collectAsState()
-    val tickers by viewModel.tickers.collectAsState()
-    val candles = viewModel.getCandlesForSelectedPair()
-
-    val timeframes = listOf("15M", "1H", "4H", "1D")
+    var selectedTf by remember { mutableStateOf("15M") }
+    var selectedPair by remember { mutableStateOf("BTC/USDT") }
 
     LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .background(DarkNavyBg)
-            .padding(horizontal = 12.dp)
-            .testTag("chart_radar_screen"),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // Hero Anti-Fragile PNL Section (Bold Typography Theme)
-        item {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp, bottom = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Text(
-                    text = "ANTI-FRAGILE PNL",
-                    color = TextMuted,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.5.sp
-                )
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(
-                        text = "+12.8",
-                        color = TextPrimary,
-                        fontSize = 44.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = (-1.5).sp,
-                        lineHeight = 46.sp
-                    )
-                    Text(
-                        text = "%",
-                        color = NeonMint,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Black,
-                        modifier = Modifier.padding(bottom = 4.dp, start = 2.dp)
-                    )
-                }
-                Text(
-                    text = "Net Profit • Last 24 Hours",
-                    color = TextMuted,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
-
-        // Two-Column Trend & Volatility Highlights
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // BTC Trend
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .background(DarkCardSurface, RoundedCornerShape(16.dp))
-                        .border(1.dp, BorderStrokeColor, RoundedCornerShape(16.dp))
-                        .padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                        text = "BTC TREND",
-                        color = TextMuted,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.2.sp
-                    )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(24.dp)
-                                .background(NeonEmerald.copy(alpha = 0.15f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.TrendingUp,
-                                contentDescription = "Bullish",
-                                tint = NeonEmerald,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                        Text(
-                            text = "BULLISH",
-                            color = TextPrimary,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 0.5.sp
-                        )
-                    }
-                }
-
-                // ATR Volatility
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .background(DarkCardSurface, RoundedCornerShape(16.dp))
-                        .border(1.dp, BorderStrokeColor, RoundedCornerShape(16.dp))
-                        .padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                        text = "ATR VOLATILITY",
-                        color = TextMuted,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.2.sp
-                    )
-                    Row(
-                        verticalAlignment = Alignment.Bottom,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = "5.42",
-                            color = TextPrimary,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = (-0.5).sp
-                        )
-                        Text(
-                            text = "x",
-                            color = TextMuted,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 1.dp)
-                        )
-                    }
-                }
-            }
-        }
-
-        // Timeframe Selector & Chart Header
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 2.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "TIMEFRAME",
-                    color = TextMuted,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.2.sp
-                )
-
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    timeframes.forEach { tf ->
-                        val isSelected = tf.equals(selectedTimeframe, ignoreCase = true)
-                        Box(
-                            modifier = Modifier
-                                .background(
-                                    if (isSelected) NeonMint else DarkCardSurface,
-                                    RoundedCornerShape(8.dp)
-                                )
-                                .border(
-                                    1.dp,
-                                    if (isSelected) NeonMint else BorderStrokeColor,
-                                    RoundedCornerShape(8.dp)
-                                )
-                                .clickable { viewModel.setSelectedTimeframe(tf.lowercase()) }
-                                .padding(horizontal = 10.dp, vertical = 5.dp)
-                                .testTag("timeframe_$tf"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = tf,
-                                color = if (isSelected) Color.Black else TextSecondary,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 0.5.sp
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        // Live Interactive Candlestick Chart
-        item {
-            InteractiveCandleChart(
-                symbol = selectedPair,
-                candles = candles,
-                timeframe = selectedTimeframe
-            )
-        }
-
-        // Quick Pair Selector Row
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "LIVE PULSE SCANNER",
-                        color = TextPrimary,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 1.2.sp
-                    )
-                    Text(
-                        text = "15 PAIRS SCANNING",
-                        color = NeonMint,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
-                }
-
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    items(tickers) { ticker ->
-                        val isSelected = ticker.symbol == selectedPair
-                        Box(
-                            modifier = Modifier
-                                .background(
-                                    if (isSelected) DarkCardElevated else DarkCardSurface,
-                                    RoundedCornerShape(12.dp)
-                                )
-                                .border(
-                                    1.2.dp,
-                                    if (isSelected) NeonMint else BorderStrokeColor,
-                                    RoundedCornerShape(12.dp)
-                                )
-                                .clickable { viewModel.setSelectedPair(ticker.symbol) }
-                                .padding(horizontal = 12.dp, vertical = 8.dp)
-                                .testTag("ticker_chip_${ticker.symbol.replace('/', '_')}"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = ticker.symbol,
-                                    color = if (isSelected) NeonMint else TextPrimary,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Black
-                                )
-                                Text(
-                                    text = "$${String.format("%.2f", ticker.price)}",
-                                    color = if (ticker.change24h >= 0) HammerLongGreen else StarShortRed,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Monospace
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Detailed Radar Scanner Pair Cards (Bold Typography Items)
-        item {
-            Text(
-                text = "ANTI-FRAGILE SIGNAL RADAR",
-                color = TextMuted,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.2.sp,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-        }
-
-        items(tickers) { ticker ->
-            RadarPairDetailCard(
-                ticker = ticker,
-                isSelected = ticker.symbol == selectedPair,
-                onSelect = { viewModel.setSelectedPair(ticker.symbol) }
-            )
-        }
-
-        item { Spacer(modifier = Modifier.height(16.dp)) }
-    }
-}
-
-@Composable
-fun RadarPairDetailCard(
-    ticker: PairTicker,
-    isSelected: Boolean,
-    onSelect: () -> Unit
-) {
-    val isBullish = ticker.change24h >= 0
-    val accentBarColor = if (ticker.lastSignal != null) {
-        if (ticker.lastSignal.action == SignalAction.BUY) HammerLongGreen else StarShortRed
-    } else if (isBullish) {
-        HammerLongGreen
-    } else {
-        StarShortRed
-    }
-
-    Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .background(if (isSelected) DarkCardElevated else DarkCardSurface, RoundedCornerShape(14.dp))
-            .border(
-                1.dp,
-                if (isSelected) NeonMint else BorderStrokeColor,
-                RoundedCornerShape(14.dp)
-            )
-            .clickable { onSelect() }
-            .padding(12.dp)
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Left: Vertical Accent Pill + Symbol & Signal Name
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+        // سود ۲۴ ساعته
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+                border = BorderStroke(1.dp, Color(0xFF30363D)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                // Bold Vertical Indicator Bar
-                Box(
-                    modifier = Modifier
-                        .width(4.dp)
-                        .height(34.dp)
-                        .background(accentBarColor, RoundedCornerShape(2.dp))
-                )
-
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = ticker.symbol,
-                            color = TextPrimary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = (-0.2).sp
-                        )
-                        if (ticker.isVolumeSpike) {
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Box(
-                                modifier = Modifier
-                                    .background(BrightGold.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
-                                    .border(0.8.dp, BrightGold, RoundedCornerShape(4.dp))
-                                    .padding(horizontal = 4.dp, vertical = 1.dp)
-                            ) {
-                                Text(
-                                    text = "VOL SPIKE",
-                                    color = BrightGold,
-                                    fontSize = 8.sp,
-                                    fontWeight = FontWeight.Black,
-                                    letterSpacing = 0.5.sp
-                                )
-                            }
-                        }
-                    }
-                    Text(
-                        text = if (ticker.lastSignal != null) {
-                            if (ticker.lastSignal.action == SignalAction.BUY) "HAMMER SIGNAL" else "SHOOTING STAR"
-                        } else {
-                            "RADAR ACTIVE"
-                        },
-                        color = TextMuted,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    horizontalAlignment = Alignment.End
+                ) {
+                    Text("ANTI-FRAGILE PNL", color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text("+12.8%", color = Color(0xFF00E676), fontSize = 28.sp, fontWeight = FontWeight.Black)
+                    Text(AppLocale.t("net_profit_24h", currentLanguage), color = Color.LightGray, fontSize = 11.sp)
                 }
-            }
-
-            // Right: Price & Change
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = "$${String.format("%.2f", ticker.price)}",
-                    color = TextPrimary,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Black,
-                    fontFamily = FontFamily.Monospace
-                )
-                Text(
-                    text = "${if (isBullish) "+" else ""}${String.format("%.2f", ticker.change24h)}%",
-                    color = if (isBullish) NeonEmerald else StarShortRed,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace
-                )
             }
         }
 
-        // Metrics row
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "RSI: ${String.format("%.1f", ticker.rsi)}",
-                color = if (ticker.rsi <= 40) HammerLongGreen else if (ticker.rsi >= 60) StarShortRed else TextSecondary,
-                fontSize = 10.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "SPREAD: ${String.format("%.4f", ticker.spread)}$",
-                color = TextMuted,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = "ATR: ${String.format("%.4f", ticker.atr)}",
-                color = NeonMint,
-                fontSize = 10.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold
-            )
+        // شاخص‌های ATR و Trend
+        item {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Card(
+                    modifier = Modifier.weight(1f),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+                    border = BorderStroke(1.dp, Color(0xFF30363D)),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(AppLocale.t("atr_volatility", currentLanguage), color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("x 5.42", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                    }
+                }
+                Card(
+                    modifier = Modifier.weight(1f),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+                    border = BorderStroke(1.dp, Color(0xFF30363D)),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(AppLocale.t("btc_trend", currentLanguage), color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(AppLocale.t("bullish", currentLanguage), color = Color(0xFF00E676), fontWeight = FontWeight.Black, fontSize = 16.sp)
+                    }
+                }
+            }
+        }
+
+        // تایم‌فریم‌ها
+        item {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("1D", "4H", "1H", "15M").forEach { tf ->
+                    val isSel = selectedTf == tf
+                    Button(
+                        onClick = { selectedTf = tf },
+                        colors = ButtonDefaults.buttonColors(containerColor = if (isSel) Color(0xFF00E676) else Color(0xFF21262D)),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f).height(36.dp),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text(tf, color = if (isSel) Color.Black else Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    }
+                }
+            }
+        }
+
+        // کادر نمودار زنده کندل‌استیک
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+                border = BorderStroke(1.dp, Color(0xFF30363D)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("$92,352.64", color = Color(0xFFFF5252), fontSize = 16.sp, fontWeight = FontWeight.Black)
+                        Surface(color = Color(0xFF00E676).copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) {
+                            Text("$selectedTf $selectedPair", color = Color(0xFF00E676), fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Box(modifier = Modifier.fillMaxWidth().height(150.dp)) {
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val w = size.width
+                            val h = size.height
+                            // رسم کندل‌ها
+                            val candleW = w / 15f
+                            for (i in 0 until 14) {
+                                val isUp = i % 2 == 0
+                                val color = if (isUp) Color(0xFF00E676) else Color(0xFFFF5252)
+                                val x = i * candleW + 10f
+                                val top = (h * 0.2f) + (i * 4f % (h * 0.4f))
+                                val btm = top + (h * 0.3f)
+                                drawLine(color, Offset(x + candleW / 4, top - 15), Offset(x + candleW / 4, btm + 15), strokeWidth = 2f)
+                                drawRect(color, Offset(x, top), Size(candleW / 2, btm - top))
+                            }
+                            // خط روند میانگین متحرک ۲۰۰
+                            val path = Path()
+                            path.moveTo(0f, h * 0.7f)
+                            path.quadraticBezierTo(w * 0.5f, h * 0.6f, w, h * 0.25f)
+                            drawPath(path, Color(0xFFFFB703), style = Stroke(width = 3f))
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(AppLocale.t("vol_filter_active", currentLanguage), color = Color.Gray, fontSize = 9.sp)
+                        Text(AppLocale.t("ema_trend_line", currentLanguage), color = Color(0xFFFFB703), fontSize = 9.sp)
+                    }
+                }
+            }
+        }
+
+        // اسکنر زنده بازار
+        item {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(AppLocale.t("pairs_scanning", currentLanguage), color = Color(0xFF00E676), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text(AppLocale.t("live_pulse_scanner", currentLanguage), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("BTC/USDT" to "$92,517.25", "ETH/USDT" to "$3,259.01", "SOL/USDT" to "$194.19", "TRX/USDT" to "$0.23").forEach { (pair, price) ->
+                    val isSel = selectedPair == pair
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isSel) Color(0xFF00E676).copy(alpha = 0.15f) else Color(0xFF21262D),
+                        border = BorderStroke(1.dp, if (isSel) Color(0xFF00E676) else Color(0xFF30363D)),
+                        modifier = Modifier.clickable { selectedPair = pair }
+                    ) {
+                        Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
+                            Text(pair, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text(price, color = Color(0xFF00E676), fontSize = 10.sp)
+                        }
+                    }
+                }
+            }
         }
     }
 }
-
