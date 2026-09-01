@@ -25,20 +25,24 @@ enum class LanguageOption(val code: String, val title: String) {
 
 @Composable
 fun HeaderPulseBar(
+    modifier: Modifier = Modifier,
+    isAlive: Boolean = true,
     isPulseAlive: Boolean = true,
     currentLanguage: LanguageOption = LanguageOption.FA,
     onLanguageSelected: (LanguageOption) -> Unit = {}
 ) {
     var langMenuExpanded by remember { mutableStateOf(false) }
+    var selectedLang by remember { mutableStateOf(currentLanguage) }
+    val activeAlive = isAlive && isPulseAlive
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // منوی کشویی زبان به جای دکمه دایره‌ای ادمین
+        // منوی کشویی انتخاب زبان ۳ گانه به جای دکمه دایره‌ای
         Box {
             Surface(
                 color = Color(0xFF21262D),
@@ -57,7 +61,7 @@ fun HeaderPulseBar(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = currentLanguage.title,
+                        text = selectedLang.title,
                         color = Color.White,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
@@ -81,12 +85,13 @@ fun HeaderPulseBar(
                         text = {
                             Text(
                                 text = lang.title,
-                                color = if (currentLanguage == lang) Color(0xFF00E676) else Color.White,
+                                color = if (selectedLang == lang) Color(0xFF00E676) else Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp
                             )
                         },
                         onClick = {
+                            selectedLang = lang
                             onLanguageSelected(lang)
                             langMenuExpanded = false
                         }
@@ -95,7 +100,7 @@ fun HeaderPulseBar(
             }
         }
 
-        // بخش برند و وضعیت موتور معاملاتی
+        // برند و وضعیت لایو انجین
         Column(horizontalAlignment = Alignment.End) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -113,7 +118,7 @@ fun HeaderPulseBar(
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = if (currentLanguage == LanguageOption.FA) "موتور معاملاتی فعال " else if (currentLanguage == LanguageOption.AR) "محرك التداول نشط " else "ENGINE ACTIVE ",
+                    text = if (selectedLang == LanguageOption.FA) "موتور معاملاتی فعال " else if (selectedLang == LanguageOption.AR) "محرك التداول نشط " else "ENGINE ACTIVE ",
                     color = Color(0xFF00E676),
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold
@@ -121,7 +126,7 @@ fun HeaderPulseBar(
                 Box(
                     modifier = Modifier
                         .size(6.dp)
-                        .background(if (isPulseAlive) Color(0xFF00E676) else Color(0xFFDC2626), CircleShape)
+                        .background(if (activeAlive) Color(0xFF00E676) else Color(0xFFDC2626), CircleShape)
                 )
             }
         }
