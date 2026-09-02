@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>HM HAMMER TradingView Chart</title>
+  <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #0d1117;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    #chart-container {
+      width: 100vw;
+      height: 100vh;
+    }
+    .watermark {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      color: rgba(255, 255, 255, 0.15);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      pointer-events: none;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <div class="watermark" id="pairWatermark">BTC/USDT • 15M (HM HAMMER ALGO)</div>
+  <div id="chart-container"></div>
+
+  <script>
+    const container = document.getElementById('chart-container');
+    const chart = LightweightCharts.createChart(container, {
+      layout: {
+        background: { color: '#0d1117' },
+        textColor: '#8b949e',
+        fontSize: 11
+      },
+      grid: {
+        vertLines: { color: '#161b22' },
+        horzLines: { color: '#161b22' }
+      },
+      crosshair: {
+        mode: LightweightCharts.CrosshairMode.Normal,
+      },
+      rightPriceScale: {
+        borderColor: '#30363d',
+      },
+      timeScale: {
+        borderColor: '#30363d',
+        timeVisible: true,
+        secondsVisible: false
+      }
+    });
+
+    const candleSeries = chart.addCandlestickSeries({
+      upColor: '#00e676',
+      downColor: '#ff5252',
+      borderVisible: false,
+      wickUpColor: '#00e676',
+      wickDownColor: '#ff5252'
+    });
+
+    // خط روند متحرک EMA 200
+    const emaSeries = chart.addLineSeries({
+      color: '#38bdf8',
+      lineWidth: 2,
+      crosshairMarkerVisible: false,
+      title: 'EMA 200'
+    });
+
+    function generateData(basePrice) {
+      const data = [];
+      const emaData = [];
+      let time = Math.floor(Date.now() / 1000) - (60 * 15 * 60);
+      let current = basePrice;
+      let ema = basePrice * 0.98;
+
+      for (let i = 0; i < 60; i++) {
+        const isHammer = (i === 48);
+        const open = current;
+        let close, high, low;
+
+        if (isHammer) {
+          close = open + (basePrice * 0.003);
+          high = close + (basePrice * 0.001);
+          low = open - (basePrice * 0.022); // سایه کشیده الگوی چکش
+        } else {
+          const change = (Math.random() - 0.48) * (basePrice * 0.01);
+          close = open + change;
+          high = Math.max(open, close) + Math.random() * (basePrice * 0.004);
+          low = Math.min(open, close) - Math.random() * (basePrice * 0.004);
+        }
+
+        data.push({ time: time, open: open, high: high, low: low, close: close });
+        ema = (close * 0.1) + (ema * 0.9);
+        emaData.push({ time: time, value: ema });
+
+        current = close;
+        time += 15 * 60;
+      }
+      return { data, emaData };
+    }
+
+    function setPair(pair, basePrice) {
+      document.getElementById('pairWatermark').innerText = pair + ' • 15M (HM HAMMER ALGO)';
+      const sets = generateData(basePrice);
+      candleSeries.setData(sets.data);
+      emaSeries.setData(sets.emaData);
+
+      // نشانگر نئونی پین الگوی چکش
+      const hammerCandle = sets.data[48];
+      candleSeries.setMarkers([
+        {
+          time: hammerCandle.time,
+          position: 'belowBar',
+          color: '#ffb703',
+          shape: 'arrowUp',
+          text: '🔨 HAMMER ENTRY'
+        }
+      ]);
+
+      chart.timeScale().fitContent();
+    }
+
+    // مقداردهی اولیه بیت‌کوین
+    setPair('BTC/USDT', 64500);
+
+    window.addEventListener('resize', () => {
+      chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
+    });
+  </script>
+</body>
+</html>
