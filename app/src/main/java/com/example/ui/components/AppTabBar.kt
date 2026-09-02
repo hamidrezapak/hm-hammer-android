@@ -29,19 +29,21 @@ fun AppTabBar(
             .horizontalScroll(scrollState),
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        val tabs = listOf(
-            AppTab.CHART to "tab_chart",
-            AppTab.TRADE to "tab_trade",
-            AppTab.AI_COPILOT to "tab_ai",
-            AppTab.HISTORY to "tab_history",
-            AppTab.WALLET to "tab_wallet",
-            AppTab.PERFORMANCE to "tab_performance",
-            AppTab.SUBSCRIPTIONS to "tab_plans",
-            AppTab.HELP to "tab_help",
-            AppTab.ADMIN to "tab_admin"
+        val tabs: List<Pair<AppTab, String>> = listOf(
+            Pair(AppTab.CHART, "tab_chart"),
+            Pair(AppTab.TRADE, "tab_trade"),
+            Pair(AppTab.AI_COPILOT, "tab_ai"),
+            Pair(AppTab.HISTORY, "tab_history"),
+            Pair(AppTab.WALLET, "tab_wallet"),
+            Pair(AppTab.PERFORMANCE, "tab_performance"),
+            Pair(AppTab.SUBSCRIPTIONS, "tab_plans"),
+            Pair(AppTab.HELP, "tab_help"),
+            Pair(AppTab.ADMIN, "tab_admin")
         )
 
-        tabs.forEach { (tab, key) ->
+        for (item in tabs) {
+            val tab = item.first
+            val key = item.second
             val isSelected = selectedTab == tab
             Button(
                 onClick = { onTabSelected(tab) },
