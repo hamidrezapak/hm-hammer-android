@@ -33,35 +33,17 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.random.Random
 
-enum class AppTab(val titleFa: String, val titleEn: String) {
+enum class AppTab(val titleFa: String = "تب", val titleEn: String = "Tab") {
+    CHART("نمودار", "Chart"),
+    TRADE("معامله", "Trade"),
     AI_COPILOT("دستیار هوش مصنوعی", "AI Copilot"),
-    CHART("چارت", "Chart"),
-    TRADE,
-        HISTORY("تاریخچه", "History"),
+    HISTORY("تاریخچه", "History"),
     WALLET("کیف‌پول", "Wallet"),
     PERFORMANCE("عملکرد", "Performance"),
-    SUBSCRIPTIONS("اشتراک‌ها", "Plans"),
+    SUBSCRIPTIONS("پلن‌ها", "Subscriptions"),
     HELP("راهنما", "Help"),
-    ADMIN("مدیریت👑", "Admin")
+    ADMIN("مدیریت", "Admin")
 }
-
-enum class HistorySortColumn {
-    ENTRY_TIME,
-    EXIT_TIME,
-    PNL_PERCENT,
-    PROFIT_USDT,
-    SYMBOL,
-    ENTRY_PRICE
-}
-
-data class DynamicLevels(
-    val stopLoss: Double,
-    val tp1: Double,
-    val tp2: Double,
-    val tp3: Double,
-    val tp4: Double,
-    val riskRewardRatio: Double
-)
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
