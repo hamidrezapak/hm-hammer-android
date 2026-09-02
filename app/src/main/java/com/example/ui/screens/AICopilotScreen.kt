@@ -31,7 +31,7 @@ data class ChatMessage(
     val isUser: Boolean,
     val text: String,
     val hasChart: Boolean = false,
-    val pair: String = "BTC/USDT",
+    val pair: String = "",
     val timeframe: String = "15M",
     val hammerIndex: Int = 8
 )
@@ -47,19 +47,9 @@ fun AICopilotScreen(
             ChatMessage(
                 id = "1",
                 isUser = false,
-                text = if (isFa) "سلام! من دستیار هوشمند و تحلیل‌گر الگوریتم HM HAMMER هستم. هر جفت‌ارز یا تحلیلی می‌خواهید بگویید تا چارت و نقاط ورود و الگوهای چکش را برایتان ترسیم و تحلیل کنم."
-                else "Hello! I am your HM HAMMER AI Copilot. Ask me to draw any chart, identify hammer patterns, or audit live market risks.",
+                text = if (isFa) "سلام! من دستیار اختصاصی موتور معامله‌گر HM HAMMER هستم. هر سوالی در رابطه با وضعیت بازار، الگوهای چکش یا مدیریت ریسک دارید بپرسید؛ همچنین برای مشاهده چارت می‌توانید نام هر ارز را به انگلیسی یا فارسی بنویسید."
+                else "Greetings! I am your HM HAMMER Intelligence Copilot. Ask about risk models, market conditions, or type any coin name to generate live chart analytics.",
                 hasChart = false
-            ),
-            ChatMessage(
-                id = "2",
-                isUser = false,
-                text = if (isFa) "📌 چارت ۱۵ دقیقه‌ای درخواستی BTC/USDT با مشخصات ستاپ ورود چکش و شیب EMA(200):"
-                else "📌 Requested BTC/USDT 15M Chart with Hammer confirmation and EMA(200) trend filter:",
-                hasChart = true,
-                pair = "BTC/USDT",
-                timeframe = "15M",
-                hammerIndex = 9
             )
         )
     }
@@ -70,7 +60,6 @@ fun AICopilotScreen(
             .background(DarkNavyBg)
             .padding(12.dp)
     ) {
-        // نوار هدر مدرن دستیار
         Surface(
             color = Color(0xFF161B22),
             shape = RoundedCornerShape(12.dp),
@@ -82,13 +71,11 @@ fun AICopilotScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .background(Color(0xFF00E676), CircleShape)
+                    modifier = Modifier.size(10.dp).background(Color(0xFF00E676), CircleShape)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (isFa) "موتور تحلیل چندزبانه و هوش مصنوعی HM HAMMER" else "HM HAMMER MULTI-LANGUAGE AI COPILOT",
+                    text = if (isFa) "دستیار تحلیلی چندزبانه HM HAMMER" else "HM HAMMER AI COPILOT ACTIVE",
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     fontSize = 11.sp
@@ -96,11 +83,8 @@ fun AICopilotScreen(
             }
         }
 
-        // جریان پیام‌ها
         LazyColumn(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
+            modifier = Modifier.weight(1f).fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             items(messages) { msg ->
@@ -110,7 +94,6 @@ fun AICopilotScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // باکس ورودی پیام
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -120,8 +103,8 @@ fun AICopilotScreen(
                 onValueChange = { inputText = it },
                 placeholder = {
                     Text(
-                        if (isFa) "مثلاً: چارت ۴ ساعته اتریوم رو بکش و تحلیل کن..."
-                        else "e.g. Draw 4H ETH chart with hammer setup...",
+                        if (isFa) "پیام خود را بنویسید (مثلاً: چارت اتریوم، یا وضعیت بازار)..."
+                        else "Type your prompt (e.g. BTC chart, market risk)...",
                         color = Color.Gray,
                         fontSize = 11.sp
                     )
@@ -142,21 +125,54 @@ fun AICopilotScreen(
             IconButton(
                 onClick = {
                     if (inputText.isNotBlank()) {
-                        val prompt = inputText
+                        val prompt = inputText.trim()
+                        val lower = prompt.lowercase()
                         messages.add(ChatMessage(id = System.currentTimeMillis().toString(), isUser = true, text = prompt))
                         inputText = ""
-                        
-                        // پاسخ هوشمند با رندر نمودار
+
+                        // پردازش منطقی درخواست کاربر
+                        val detectedPair = when {
+                            lower.contains("btc") || lower.contains("بیت") -> "BTC/USDT"
+                            lower.contains("eth") || lower.contains("اتریوم") -> "ETH/USDT"
+                            lower.contains("sol") || lower.contains("سولانا") -> "SOL/USDT"
+                            lower.contains("bnb") || lower.contains("بی ان بی") -> "BNB/USDT"
+                            lower.contains("doge") || lower.contains("دوج") -> "DOGE/USDT"
+                            else -> null
+                        }
+
+                        val hasChartIntent = detectedPair != null || lower.contains("چارت") || lower.contains("نمودار") || lower.contains("chart")
+
+                        val replyText: String
+                        val attachChart: Boolean
+                        val finalPair = detectedPair ?: "BTC/USDT"
+
+                        if (lower.contains("سلام") || lower.contains("درود") || lower.contains("hello") || lower.contains("hi")) {
+                            replyText = if (isFa) "درود بر شما! سیستم مانیتورینگ آماده دریافت فرامین معاملاتی و تحلیلی شماست."
+                            else "Hello! Trading bot and analysis engine are online and synced."
+                            attachChart = false
+                        } else if (hasChartIntent) {
+                            replyText = if (isFa) "📊 چارت درخواستی نماد $finalPair رندر شد. وضعیت: تشکیل کندل پین‌بار چکش در انتهای اصلاح نزولی همراه با تاییدیه خط روند EMA."
+                            else "📊 Chart rendered for $finalPair. Status: Rejection pinbar hammer confirmed above trendline."
+                            attachChart = true
+                        } else if (lower.contains("سود") || lower.contains("پلن") || lower.contains("plan")) {
+                            replyText = if (isFa) "پلن‌های HM HAMMER بر پایه استراتژی مدیریت ریسک داینامیک ATR کار می‌کنند و کلیه معاملات روی جفت‌ارزهای تتری انجام می‌گیرد تا ارزش دلاری سرمایه حفظ شود."
+                            else "All plans execute strictly on USDT pairs to protect against local currency depreciation."
+                            attachChart = false
+                        } else {
+                            replyText = if (isFa) "درخواست شما تحلیل شد. شاخص‌های تکنیکال در محدوده نرمال قرار دارند. اگر نیاز به مشاهده نمودار نماد خاصی دارید، نام آن را ارسال کنید."
+                            else "Query acknowledged. Technical metrics are healthy. Mention any coin name to inspect its live structure."
+                            attachChart = false
+                        }
+
                         messages.add(
                             ChatMessage(
                                 id = (System.currentTimeMillis() + 1).toString(),
                                 isUser = false,
-                                text = if (isFa) "تحلیل الگوی چکش و پایش سطوح فیبوناچی برای درخواست شما انجام شد:"
-                                else "Setup verified. Hammer wick ratio and ATR dynamic bands rendered below:",
-                                hasChart = true,
-                                pair = "SOL/USDT",
-                                timeframe = "1H",
-                                hammerIndex = 11
+                                text = replyText,
+                                hasChart = attachChart,
+                                pair = finalPair,
+                                timeframe = "15M",
+                                hammerIndex = 10
                             )
                         )
                     }
@@ -199,7 +215,6 @@ fun ChatBubble(message: ChatMessage) {
                     lineHeight = 17.sp
                 )
 
-                // رندر مینی‌چارت در صورت فعال بودن فلگ چارت
                 if (message.hasChart) {
                     Spacer(modifier = Modifier.height(10.dp))
                     Surface(
@@ -240,13 +255,10 @@ fun ChatBubble(message: ChatMessage) {
                                         val wickBottom = if (isHammer) bodyTop + 55f else bodyTop + bodyH + 18f
                                         val wickTop = bodyTop - 10f
 
-                                        // رسم سایه (Wick)
                                         drawLine(color, Offset(x + candleW / 4, wickTop), Offset(x + candleW / 4, wickBottom), strokeWidth = if (isHammer) 3.5f else 2f)
-                                        // رسم بدنه (Body)
                                         drawRect(color, Offset(x, bodyTop), Size(candleW / 2, bodyH))
                                     }
 
-                                    // خط روند میانگین متحرک EMA
                                     val emaPath = Path()
                                     emaPath.moveTo(0f, h * 0.75f)
                                     emaPath.quadraticBezierTo(w * 0.5f, h * 0.6f, w, h * 0.35f)
@@ -255,7 +267,7 @@ fun ChatBubble(message: ChatMessage) {
                             }
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                "EMA(200) Macro Trend: BULLISH | Risk: 2% | R:R ~ 1:1.6",
+                                "EMA(200) Macro Trend: BULLISH | ATR Risk: 2%",
                                 color = Color.Gray,
                                 fontSize = 8.sp
                             )
