@@ -36,8 +36,7 @@ import kotlin.random.Random
 enum class AppTab(val titleFa: String, val titleEn: String) {
     CHART("چارت", "Chart"),
     TRADE,
-    AI_COPILOT("دستیار AI", "AI Copilot"),
-    HISTORY("تاریخچه", "History"),
+        HISTORY("تاریخچه", "History"),
     WALLET("کیف‌پول", "Wallet"),
     PERFORMANCE("عملکرد", "Performance"),
     SUBSCRIPTIONS("اشتراک‌ها", "Plans"),
