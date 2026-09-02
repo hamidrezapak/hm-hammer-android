@@ -1,6 +1,5 @@
 package com.example.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -19,43 +18,45 @@ import com.example.ui.viewmodel.AppTab
 fun AppTabBar(
     selectedTab: AppTab,
     onTabSelected: (AppTab) -> Unit,
-    modifier: Modifier = Modifier,
-    currentLanguage: LanguageOption = LanguageOption.FA
+    currentLanguage: LanguageOption = LanguageOption.FA,
+    modifier: Modifier = Modifier
 ) {
+    val scrollState = rememberScrollState()
+
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
+            .horizontalScroll(scrollState),
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        AppTab.values().forEach { tab ->
-            val isSelected = selectedTab == tab
-            val tabKey = when (tab) {
-                AppTab.CHART -> "tab_chart"
-                AppTab.TRADE -> "tab_trade"
-                AppTab.HISTORY -> "tab_history"
-                AppTab.WALLET -> "tab_wallet"
-                AppTab.ADMIN -> "tab_admin"
-                AppTab.HELP -> "tab_help"
-                AppTab.PERFORMANCE -> "tab_performance"
-                AppTab.SUBSCRIPTIONS -> "tab_plans"
-            }
-            val title = AppLocale.t(tabKey, currentLanguage)
+        val tabs = listOf(
+            AppTab.CHART to "tab_chart",
+            AppTab.TRADE to "tab_trade",
+            AppTab.AI_COPILOT to "tab_ai",
+            AppTab.HISTORY to "tab_history",
+            AppTab.WALLET to "tab_wallet",
+            AppTab.PERFORMANCE to "tab_performance",
+            AppTab.SUBSCRIPTIONS to "tab_plans",
+            AppTab.HELP to "tab_help",
+            AppTab.ADMIN to "tab_admin"
+        )
 
+        tabs.forEach { (tab, key) ->
+            val isSelected = selectedTab == tab
             Button(
                 onClick = { onTabSelected(tab) },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isSelected) Color(0xFF00E676) else Color(0xFF21262D),
-                    contentColor = if (isSelected) Color.Black else Color.White
+                    containerColor = if (isSelected) Color(0xFF00E676) else Color(0xFF21262D)
                 ),
                 shape = RoundedCornerShape(8.dp),
-                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                modifier = Modifier.height(36.dp)
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                modifier = Modifier.height(34.dp)
             ) {
                 Text(
-                    text = title,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
+                    text = AppLocale.t(key, currentLanguage),
+                    color = if (isSelected) Color.Black else Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp
                 )
             }
         }

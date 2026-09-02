@@ -82,10 +82,11 @@ fun MainAppScreen(
             when (currentTab) {
                 AppTab.CHART -> ChartRadarScreen(viewModel = viewModel)
                 AppTab.TRADE -> TradeScreen(viewModel = viewModel)
+                AppTab.AI_COPILOT -> AICopilotScreen(currentLanguage = currentLanguage)
                 AppTab.HISTORY -> TransactionHistoryScreen(viewModel = viewModel)
-                AppTab.WALLET -> WalletScreen(viewModel = viewModel)
+                AppTab.WALLET -> WalletScreen(viewModel = viewModel, currentLanguage = currentLanguage)
                 AppTab.PERFORMANCE -> PerformanceScreen(viewModel = viewModel)
-                AppTab.SUBSCRIPTIONS -> SubscriptionsScreen(viewModel = viewModel)
+                AppTab.SUBSCRIPTIONS -> SubscriptionsScreen(viewModel = viewModel, currentLanguage = currentLanguage)
                 AppTab.HELP -> HelpGuideScreen()
                 AppTab.ADMIN -> AdminScreen(viewModel = viewModel)
             }
