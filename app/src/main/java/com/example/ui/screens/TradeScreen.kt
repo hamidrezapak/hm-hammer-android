@@ -19,7 +19,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.model.TradeStatus
 import com.example.ui.theme.DarkNavyBg
 import com.example.ui.viewmodel.MainViewModel
 
@@ -29,7 +28,6 @@ fun TradeScreen(viewModel: MainViewModel) {
     val balance by viewModel.usdtBalance.collectAsState()
     val isConnected by viewModel.isApiConnected.collectAsState()
     val isRunning by viewModel.isEngineRunning.collectAsState()
-    val trades by viewModel.trades.collectAsState()
     val engineLog by viewModel.lastEngineLog.collectAsState()
     val auditLogs by viewModel.auditLogs.collectAsState()
 

@@ -7,8 +7,11 @@ import com.example.model.TradeStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
@@ -87,13 +90,25 @@ class MainViewModel : ViewModel() {
     private val _lastEngineLog = MutableStateFlow("موتور آماده به کار است. کلید والکس را تایید کرده و استارت بزنید.")
     val lastEngineLog: StateFlow<String> = _lastEngineLog.asStateFlow()
 
-    // فیلترها و متغیرهای TransactionHistoryScreen
+    // فیلترها و مرتب‌سازی مخصوص TransactionHistoryScreen
     val historySearchQuery = MutableStateFlow("")
     val historySymbolFilter = MutableStateFlow("ALL")
     val historySideFilter = MutableStateFlow("ALL")
     val historyStatusFilter = MutableStateFlow("ALL")
     val historySortColumn = MutableStateFlow(HistorySortColumn.DATE)
     val historySortAscending = MutableStateFlow(false)
+
+    // استریم لیست فیلترشده برای صفحه تاریخچه
+    val filteredHistoryTrades: StateFlow<List<TradeOrder>> = combine(
+        _trades, historySearchQuery, historySymbolFilter, historySideFilter, historyStatusFilter
+    ) { tradeList, query, sym, side, status ->
+        tradeList.filter { t ->
+            (query.isEmpty() || t.symbol.contains(query, ignoreCase = true) || t.closeReason.contains(query, ignoreCase = true)) &&
+            (sym == "ALL" || t.symbol.equals(sym, ignoreCase = true)) &&
+            (side == "ALL" || t.side.equals(side, ignoreCase = true)) &&
+            (status == "ALL" || t.status.name.equals(status, ignoreCase = true))
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         addAuditLog("SYSTEM", "هسته نرم‌افزار HM HAMMER مقداردهی شد.", true)
