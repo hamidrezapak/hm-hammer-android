@@ -1,151 +1,119 @@
 package com.example.ui.screens
 
-import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.components.LanguageOption
 import com.example.ui.theme.DarkNavyBg
+import com.example.ui.viewmodel.MainViewModel
 
-data class ChatMessage(val id: String, val isUser: Boolean, val text: String)
+data class ChatMessage(val sender: String, val message: String, val isAi: Boolean)
 
 @Composable
-fun AICopilotScreen(currentLanguage: LanguageOption = LanguageOption.FA) {
-    val context = LocalContext.current
-    var inputText by remember { mutableStateOf("") }
-    val messages = remember {
-        mutableStateListOf(
-            ChatMessage("1", false, "درود! دستیار هوش مصنوعی HM HAMMER آنلاین است. می‌توانید با دکمه‌های زیر یا با نوشتن سوال، وضعیت استراتژی و الگوها را تست کنید.")
+fun AICopilotScreen(viewModel: MainViewModel) {
+    var messages by remember {
+        mutableStateOf(
+            listOf(
+                ChatMessage("HM AI", "دستیار تحلیلی HM HAMMER متصل است. ارزیابی لحظه‌ای الگوهای چکش، سطوح فیبوناچی و ریسک مارکت فعال می‌باشد. سوال خود را مطرح کنید یا وضعیت جاری را جویا شوید.", true)
+            )
         )
     }
-
-    fun handleSend(text: String) {
-        if (text.isBlank()) return
-        messages.add(ChatMessage(System.currentTimeMillis().toString(), true, text))
-        inputText = ""
-
-        val q = text.lowercase()
-        val reply = when {
-            q.contains("بیت") || q.contains("btc") ->
-                "تحلیل بیت‌کوین: قیمت بالای EMA(200) تثبیت شده و ساختار صعودی حفظ گردیده است. الگوی چکش در محدوده حمایتی ۶۴,۲۰۰ تایید شد."
-            q.contains("تست") || q.contains("خرید") ->
-                "سیستم آماده معامله است. در تب 'معامله' می‌توانید با دکمه BUY ALL تا ۹۰٪ سرمایه را در ستاپ چکش وارد پوزیشن کنید."
-            q.contains("استراتژی") || q.contains("ریسک") ->
-                "مدیریت سرمایه فعال: حد ضرر بر مبنای ۱.۵ برابر ATR و تارگت‌ها به ترتیب R:R ۱ به ۱، ۱ به ۱.۶ و ۱ به ۲.۲ چیده شده‌اند."
-            q.contains("پلن") ->
-                "پلن‌های کاربری در سه سطح برنزی، نقره‌ای و سازمانی تنظیم شده‌اند و از تب پلن‌ها به صورت آنی قابل فعال‌سازی هستند."
-            else ->
-                "فرمان شما دریافت شد. تمامی ماژول‌های اسکن بازار و مدیریت ریسک در وضعیت ایمن و عملیاتی قرار دارند."
-        }
-        messages.add(ChatMessage((System.currentTimeMillis() + 1).toString(), false, reply))
-        Toast.makeText(context, "پاسخ تحلیل تولید شد", Toast.LENGTH_SHORT).show()
-    }
+    var inputText by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(DarkNavyBg)
-            .padding(12.dp)
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Surface(
-            color = Color(0xFF161B22),
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+            border = BorderStroke(1.dp, Color(0xFF38BDF8)),
             shape = RoundedCornerShape(10.dp),
-            border = BorderStroke(1.dp, Color(0xFF30363D)),
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(10.dp).background(Color(0xFF00E676), CircleShape))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("دستیار تحلیل زنده HM HAMMER", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-            }
-        }
-
-        // دکمه‌های آماده تست سریع برای کاربر
-        Row(
-            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(bottom = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            listOf("وضعیت بیت‌کوین چطوره؟", "تست استراتژی چکش", "بررسی مدیریت ریسک", "پلن‌های فعال").forEach { chip ->
-                AssistChip(
-                    onClick = { handleSend(chip) },
-                    label = { Text(chip, fontSize = 10.sp, color = Color.White) },
-                    colors = AssistChipDefaults.assistChipColors(containerColor = Color(0xFF21262D))
-                )
+            Row(
+                modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("دستیار هوشمند الگوریتم چکش", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text("آنالیز Orderflow و پرایس اکشن زنده", color = Color(0xFF00E676), fontSize = 10.sp)
+                }
+                Surface(
+                    color = Color(0xFF38BDF8).copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text("ACTIVE COPILOT", color = Color(0xFF38BDF8), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(6.dp, 3.dp))
+                }
             }
         }
 
         LazyColumn(
             modifier = Modifier.weight(1f).fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(messages) { msg ->
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = if (msg.isUser) Alignment.End else Alignment.Start
-                ) {
+                val bg = if (msg.isAi) Color(0xFF161B22) else Color(0xFF238636).copy(alpha = 0.8f)
+                val align = if (msg.isAi) Alignment.Start else Alignment.End
+
+                Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = align) {
                     Surface(
-                        color = if (msg.isUser) Color(0xFF1F6FEB) else Color(0xFF161B22),
-                        shape = RoundedCornerShape(12.dp),
-                        border = if (!msg.isUser) BorderStroke(1.dp, Color(0xFF30363D)) else null,
-                        modifier = Modifier.widthIn(max = 290.dp)
+                        color = bg,
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, if (msg.isAi) Color(0xFF30363D) else Color(0xFF2EA043)),
+                        modifier = Modifier.widthIn(max = 300.dp)
                     ) {
-                        Text(
-                            text = msg.text,
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            lineHeight = 18.sp,
-                            modifier = Modifier.padding(12.dp)
-                        )
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text(msg.sender, color = if (msg.isAi) Color(0xFF38BDF8) else Color(0xFFE6EDF3), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(msg.message, color = Color.White, fontSize = 12.sp, lineHeight = 18.sp)
+                        }
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = inputText,
                 onValueChange = { inputText = it },
-                placeholder = { Text("سوال تریدینگ خود را بنویسید...", color = Color.Gray, fontSize = 11.sp) },
+                placeholder = { Text("سوال یا تحلیل نماد مورد نظر...", color = Color.Gray, fontSize = 11.sp) },
                 modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(24.dp),
+                singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFF161B22),
-                    unfocusedContainerColor = Color(0xFF161B22),
-                    focusedBorderColor = Color(0xFF00E676),
-                    unfocusedBorderColor = Color(0xFF30363D),
                     focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White
-                ),
-                singleLine = true
+                    unfocusedTextColor = Color.White,
+                    focusedBorderColor = Color(0xFF38BDF8),
+                    unfocusedBorderColor = Color(0xFF30363D)
+                )
             )
             Spacer(modifier = Modifier.width(8.dp))
-            IconButton(
-                onClick = { handleSend(inputText) },
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(Brush.linearGradient(listOf(Color(0xFF00E676), Color(0xFF00B0FF))), CircleShape)
+            Button(
+                onClick = {
+                    if (inputText.isNotBlank()) {
+                        val query = inputText.trim()
+                        val response = viewModel.queryAiCopilot(query)
+                        messages = messages + ChatMessage("شما", query, false) + ChatMessage("HM AI", response, true)
+                        inputText = ""
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF38BDF8)),
+                shape = RoundedCornerShape(8.dp)
             ) {
-                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = Color.Black)
+                Text("ارسال", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.sp)
             }
         }
     }
