@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.model.TradeOrder
 import com.example.model.TradeStatus
-import com.example.model.UserConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,7 +11,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.text.SimpleDateFormat
@@ -28,6 +26,10 @@ enum class AppTab(val titleFa: String = "تب", val titleEn: String = "Tab") {
     SUBSCRIPTIONS("پلن‌ها", "Subscriptions"),
     HELP("راهنما", "Help"),
     ADMIN("مدیریت", "Admin")
+}
+
+enum class HistorySortColumn {
+    DATE, PAIR, SIDE, PROFIT, AMOUNT
 }
 
 data class DynamicLevels(
@@ -61,7 +63,7 @@ class MainViewModel : ViewModel() {
     private val _isApiConnected = MutableStateFlow(false)
     val isApiConnected: StateFlow<Boolean> = _isApiConnected.asStateFlow()
 
-    private val _usdtBalance = MutableStateFlow(0.0)
+    private val _usdtBalance = MutableStateFlow(50.0)
     val usdtBalance: StateFlow<Double> = _usdtBalance.asStateFlow()
 
     private val _tomanRate = MutableStateFlow(62500.0)
@@ -85,12 +87,33 @@ class MainViewModel : ViewModel() {
     private val _lastEngineLog = MutableStateFlow("موتور آماده به کار است. کلید والکس را تایید کرده و استارت بزنید.")
     val lastEngineLog: StateFlow<String> = _lastEngineLog.asStateFlow()
 
+    // فیلترها و متغیرهای TransactionHistoryScreen
+    val historySearchQuery = MutableStateFlow("")
+    val historySymbolFilter = MutableStateFlow("ALL")
+    val historySideFilter = MutableStateFlow("ALL")
+    val historyStatusFilter = MutableStateFlow("ALL")
+    val historySortColumn = MutableStateFlow(HistorySortColumn.DATE)
+    val historySortAscending = MutableStateFlow(false)
+
     init {
         addAuditLog("SYSTEM", "هسته نرم‌افزار HM HAMMER مقداردهی شد.", true)
         recalculateLevels(64500.0, "BUY")
     }
 
     fun setTab(tab: AppTab) { _currentTab.value = tab }
+
+    fun setHistorySearchQuery(query: String) { historySearchQuery.value = query }
+    fun setHistorySymbolFilter(sym: String) { historySymbolFilter.value = sym }
+    fun setHistorySideFilter(side: String) { historySideFilter.value = side }
+    fun setHistoryStatusFilter(status: String) { historyStatusFilter.value = status }
+    fun setHistorySortColumn(col: HistorySortColumn) {
+        if (historySortColumn.value == col) {
+            historySortAscending.value = !historySortAscending.value
+        } else {
+            historySortColumn.value = col
+            historySortAscending.value = false
+        }
+    }
 
     fun addAuditLog(type: String, message: String, success: Boolean = true) {
         val sdf = SimpleDateFormat("HH:mm:ss - yyyy/MM/dd", Locale.getDefault())
@@ -133,7 +156,6 @@ class MainViewModel : ViewModel() {
 
             if (success) {
                 _isApiConnected.value = true
-                if (_usdtBalance.value == 0.0) _usdtBalance.value = 50.0
                 val successMsg = "کلید API والکس با موفقیت تایید و ذخیره شد."
                 _lastEngineLog.value = successMsg
                 addAuditLog("API_CONNECTED", successMsg, true)
@@ -192,44 +214,71 @@ class MainViewModel : ViewModel() {
     fun executeOrder(side: String, maxAllocation: Boolean, isAuto: Boolean = false) {
         viewModelScope.launch {
             val bal = _usdtBalance.value
-            val tradeAmount = if (maxAllocation) bal * 0.9 else minOf(bal * 0.5, 20.0)
+            val tradeAmountUsdt = if (maxAllocation) bal * 0.9 else minOf(bal * 0.5, 20.0)
 
-            if (tradeAmount < 5.0 || bal <= 0.0) {
+            if (tradeAmountUsdt < 5.0 || bal <= 0.0) {
                 val err = "خطا: حداقل موجودی ۵ تتر برای ثبت سفارش رعایت نشده است."
                 _lastEngineLog.value = err
                 addAuditLog("ORDER_REJECTED", err, false)
                 return@launch
             }
 
+            val price = _currentPrice.value
+            val levels = _dynamicLevels.value
             val newOrder = TradeOrder(
-                id = System.currentTimeMillis(),
                 symbol = _selectedPair.value,
                 side = side,
-                price = _currentPrice.value,
-                amount = tradeAmount,
+                entryPrice = price,
+                currentPrice = price,
+                exitPrice = 0.0,
+                stopLoss = levels.stopLoss,
+                tp1 = levels.tp1,
+                tp2 = levels.tp2,
+                tp3 = levels.tp3,
+                tp4 = levels.tp4,
+                amountTmn = tradeAmountUsdt * _tomanRate.value,
+                leverage = "2x",
                 status = TradeStatus.OPEN,
-                stopLoss = _dynamicLevels.value.stopLoss,
-                tp1 = _dynamicLevels.value.tp1,
-                tp2 = _dynamicLevels.value.tp2
+                pnlPercent = 0.0,
+                profitUsdt = 0.0,
+                isPostOnly = true,
+                entryTimestamp = System.currentTimeMillis(),
+                exitTimestamp = 0L,
+                closeReason = "Active",
+                timestamp = System.currentTimeMillis()
             )
 
-            _usdtBalance.value -= tradeAmount
+            _usdtBalance.value -= tradeAmountUsdt
             _trades.value = listOf(newOrder) + _trades.value
-            val logText = "${if (isAuto) "ترید خودکار" else "ترید دستی"}: سفارش $side روی ${_selectedPair.value} با حجم ${tradeAmount.toInt()} USDT ثبت شد."
+            val logText = "${if (isAuto) "ترید خودکار" else "ترید دستی"}: سفارش $side با حجم ${tradeAmountUsdt.toInt()} USDT ثبت شد."
             _lastEngineLog.value = logText
             addAuditLog("ORDER_OPENED", logText, true)
         }
     }
 
-    fun closeOrder(orderId: Long, isProfit: Boolean) {
-        val order = _trades.value.find { it.id == orderId } ?: return
+    fun closeTradeManually(order: TradeOrder) {
+        closeOrder(order.timestamp, isProfit = true)
+    }
+
+    fun closeOrder(orderTimestamp: Long, isProfit: Boolean) {
+        val order = _trades.value.find { it.timestamp == orderTimestamp } ?: return
+        val tradeAmountUsdt = order.amountTmn / _tomanRate.value
         val multiplier = if (isProfit) 1.04 else 0.985
-        val payout = order.amount * multiplier
-        val diff = payout - order.amount
+        val payout = tradeAmountUsdt * multiplier
+        val diff = payout - tradeAmountUsdt
 
         _usdtBalance.value += payout
         _trades.value = _trades.value.map {
-            if (it.id == orderId) it.copy(status = TradeStatus.CLOSED) else it
+            if (it.timestamp == orderTimestamp) {
+                it.copy(
+                    status = TradeStatus.CLOSED,
+                    exitPrice = if (isProfit) it.tp1 else it.stopLoss,
+                    profitUsdt = diff,
+                    pnlPercent = if (isProfit) 4.0 else -1.5,
+                    exitTimestamp = System.currentTimeMillis(),
+                    closeReason = if (isProfit) "Take Profit" else "Stop Loss"
+                )
+            } else it
         }
 
         val resText = "معامله ${order.symbol} بسته شد. سود/زیان: ${if (diff >= 0) "+$" else "-$"}${String.format("%.2f", kotlin.math.abs(diff))} USDT"
