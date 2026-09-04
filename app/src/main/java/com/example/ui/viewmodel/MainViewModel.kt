@@ -364,7 +364,7 @@ class MainViewModel : ViewModel() {
     }
 
     suspend fun queryAiCopilot(userQuestion: String): String {
-        return AICopilotEngine.queryRealAi(_selectedPair.value, _currentPrice.value, userQuestion)
+        return AICopilotEngine.queryRealAi(_selectedPair.value, _currentPrice.value, _tomanRate.value, userQuestion)
     }
 
     fun purgeSandbox() {
