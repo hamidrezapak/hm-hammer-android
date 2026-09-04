@@ -22,12 +22,12 @@ data class ChatMessage(val sender: String, val message: String, val isAi: Boolea
 @Composable
 fun AICopilotScreen(
     viewModel: MainViewModel,
-    currentLanguage: String = "FA"
+    currentLanguage: Any? = null
 ) {
     var messages by remember {
         mutableStateOf(
             listOf(
-                ChatMessage("HM AI", "دستیار هوشمند الگوریتم چکش متصل است. آنالیز کندل‌های زنده، سطوح فیبوناچی و ریسک مارکت فعال می‌باشد. سوال خود را مطرح کنید:", true)
+                ChatMessage("HM AI", "دستیار هوشمند الگوریتم چکش متصل است. آنالیز کندل‌های زنده، سطوح فیبوناچی و ارزیابی ریسک فعال می‌باشد. سوال یا درخواست تحلیل خود را مطرح کنید:", true)
             )
         )
     }
@@ -59,7 +59,7 @@ fun AICopilotScreen(
                     color = Color(0xFF38BDF8).copy(alpha = 0.2f),
                     shape = RoundedCornerShape(6.dp)
                 ) {
-                    Text("LIVE AI", color = Color(0xFF38BDF8), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(6.dp, 3.dp))
+                    Text("LIVE AI", color = Color(0xFF38BDF8), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp))
                 }
             }
         }
