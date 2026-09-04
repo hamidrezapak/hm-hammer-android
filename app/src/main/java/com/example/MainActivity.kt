@@ -5,14 +5,18 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import com.example.ui.components.AppTabBar
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.ui.screens.*
 import com.example.ui.theme.DarkNavyBg
 import com.example.ui.viewmodel.AppTab
@@ -40,25 +44,82 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainAppScreen(viewModel: MainViewModel) {
     val currentTab by viewModel.currentTab.collectAsState()
+    val isRunning by viewModel.isEngineRunning.collectAsState()
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        bottomBar = {
-            AppTabBar(
-                selectedTab = currentTab,
-                onTabSelected = { viewModel.setTab(it) }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(DarkNavyBg)
+    ) {
+        // هدر بالای صفحه با استایل وب‌اپ تلگرام
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF161B22))
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "HM HAMMER PRO",
+                color = Color(0xFF38BDF8),
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp
             )
+            Surface(
+                color = if (isRunning) Color(0xFF00E676).copy(alpha = 0.2f) else Color(0xFFFF9800).copy(alpha = 0.2f),
+                shape = RoundedCornerShape(6.dp)
+            ) {
+                Text(
+                    if (isRunning) "ENGINE ACTIVE ●" else "STANDBY ●",
+                    color = if (isRunning) Color(0xFF00E676) else Color(0xFFFF9800),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
         }
-    ) { innerPadding ->
+
+        // تب‌بار اسکرولی بالای صفحه دقیقا مانند تلگرام
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF0D1117))
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            AppTab.values().forEach { tab ->
+                val isSelected = currentTab == tab
+                Button(
+                    onClick = { viewModel.setTab(tab) },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isSelected) Color(0xFF00E5FF) else Color(0xFF161B22)
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                    modifier = Modifier.height(34.dp)
+                ) {
+                    Text(
+                        tab.titleFa,
+                        color = if (isSelected) Color.Black else Color.LightGray,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        fontSize = 11.sp
+                    )
+                }
+            }
+        }
+
+        // فضای محتوای صفحه متناظر
         Box(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .weight(1f)
                 .background(DarkNavyBg)
-                .padding(innerPadding)
         ) {
             when (currentTab) {
-                AppTab.TRADE -> TradeScreen(viewModel = viewModel)
                 AppTab.CHART -> ChartRadarScreen(viewModel = viewModel)
+                AppTab.TRADE -> TradeScreen(viewModel = viewModel)
                 AppTab.AI_COPILOT -> AICopilotScreen(viewModel = viewModel)
                 AppTab.HISTORY -> TransactionHistoryScreen(viewModel = viewModel)
                 AppTab.WALLET -> WalletScreen(viewModel = viewModel)
