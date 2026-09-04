@@ -20,10 +20,10 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
-    - name: Build APK
+    - name: Build APK Clean
       run: |
         chmod +x ./gradlew
-        ./gradlew assembleDebug -x test --no-daemon --stacktrace
+        ./gradlew assembleDebug -x test --no-daemon --no-configuration-cache --stacktrace
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
