@@ -20,11 +20,14 @@ import com.example.ui.viewmodel.MainViewModel
 data class ChatMessage(val sender: String, val message: String, val isAi: Boolean)
 
 @Composable
-fun AICopilotScreen(viewModel: MainViewModel) {
+fun AICopilotScreen(
+    viewModel: MainViewModel,
+    currentLanguage: String = "FA"
+) {
     var messages by remember {
         mutableStateOf(
             listOf(
-                ChatMessage("HM AI", "دستیار تحلیلی HM HAMMER متصل است. ارزیابی لحظه‌ای الگوهای چکش، سطوح فیبوناچی و ریسک مارکت فعال می‌باشد. سوال خود را مطرح کنید یا وضعیت جاری را جویا شوید.", true)
+                ChatMessage("HM AI", "دستیار هوشمند الگوریتم چکش متصل است. آنالیز کندل‌های زنده، سطوح فیبوناچی و ریسک مارکت فعال می‌باشد. سوال خود را مطرح کنید:", true)
             )
         )
     }
@@ -49,14 +52,14 @@ fun AICopilotScreen(viewModel: MainViewModel) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("دستیار هوشمند الگوریتم چکش", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Text("آنالیز Orderflow و پرایس اکشن زنده", color = Color(0xFF00E676), fontSize = 10.sp)
+                    Text("دستیار هوش مصنوعی HM HAMMER", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text("آنالیز جریان سفارشات و کندل چکش", color = Color(0xFF00E676), fontSize = 10.sp)
                 }
                 Surface(
                     color = Color(0xFF38BDF8).copy(alpha = 0.2f),
                     shape = RoundedCornerShape(6.dp)
                 ) {
-                    Text("ACTIVE COPILOT", color = Color(0xFF38BDF8), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(6.dp, 3.dp))
+                    Text("LIVE AI", color = Color(0xFF38BDF8), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(6.dp, 3.dp))
                 }
             }
         }
@@ -90,7 +93,7 @@ fun AICopilotScreen(viewModel: MainViewModel) {
             OutlinedTextField(
                 value = inputText,
                 onValueChange = { inputText = it },
-                placeholder = { Text("سوال یا تحلیل نماد مورد نظر...", color = Color.Gray, fontSize = 11.sp) },
+                placeholder = { Text("تحلیل یا سوال از بازار...", color = Color.Gray, fontSize = 11.sp) },
                 modifier = Modifier.weight(1f),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
