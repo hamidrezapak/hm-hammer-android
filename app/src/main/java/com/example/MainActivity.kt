@@ -50,13 +50,14 @@ fun MainAppScreen(viewModel: MainViewModel) {
         modifier = Modifier
             .fillMaxSize()
             .background(DarkNavyBg)
+            .statusBarsPadding() // فاصله ایمن از بالای صفحه و آیکون‌های باتری/آنتن
     ) {
-        // هدر بالای صفحه با استایل وب‌اپ تلگرام
+        // نوار عنوان اختصاصی با حاشیه مناسب
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color(0xFF161B22))
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .padding(horizontal = 16.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -80,7 +81,7 @@ fun MainAppScreen(viewModel: MainViewModel) {
             }
         }
 
-        // تب‌بار اسکرولی بالای صفحه دقیقا مانند تلگرام
+        // تب‌بار اسکرولی با پس‌زمینه یکدست
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -110,7 +111,7 @@ fun MainAppScreen(viewModel: MainViewModel) {
             }
         }
 
-        // فضای محتوای صفحه متناظر
+        // فضای نمایش محتوا
         Box(
             modifier = Modifier
                 .fillMaxWidth()
