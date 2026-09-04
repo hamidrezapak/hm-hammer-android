@@ -9,11 +9,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.example.ui.components.AppTabBar
 import com.example.ui.screens.*
-import com.example.ui.theme.DarkNavyBg
-import com.example.ui.theme.HMHammerTheme
+import com.example.ui.theme.*
 import com.example.ui.viewmodel.AppTab
 import com.example.ui.viewmodel.MainViewModel
 
@@ -23,7 +21,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            HMHammerTheme {
+            MaterialTheme {
                 MainAppScreen(viewModel = viewModel)
             }
         }
@@ -38,7 +36,7 @@ fun MainAppScreen(viewModel: MainViewModel) {
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
             AppTabBar(
-                currentTab = currentTab,
+                selectedTab = currentTab,
                 onTabSelected = { viewModel.setTab(it) }
             )
         }
