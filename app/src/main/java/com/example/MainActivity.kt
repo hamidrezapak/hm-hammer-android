@@ -68,14 +68,14 @@ fun MainAppScreen(
             HeaderPulseBar(
                 isAlive = isPulseAlive,
                 isPulseAlive = isPulseAlive,
-                currentLanguage = currentLanguage,
+                ,
                 onLanguageSelected = onLanguageChanged
             )
 
             AppTabBar(
                 selectedTab = currentTab,
                 onTabSelected = { viewModel.setTab(it) },
-                currentLanguage = currentLanguage,
+                ,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
             )
 
@@ -84,9 +84,9 @@ fun MainAppScreen(
                 AppTab.TRADE -> TradeScreen(viewModel = viewModel)
                 AppTab.AI_COPILOT -> AICopilotScreen(viewModel = viewModel)
                 AppTab.HISTORY -> TransactionHistoryScreen(viewModel = viewModel)
-                AppTab.WALLET -> WalletScreen(viewModel = viewModel, currentLanguage = currentLanguage)
+                AppTab.WALLET -> WalletScreen(viewModel = viewModel, )
                 AppTab.PERFORMANCE -> PerformanceScreen(viewModel = viewModel)
-                AppTab.SUBSCRIPTIONS -> SubscriptionsScreen(viewModel = viewModel, currentLanguage = currentLanguage)
+                AppTab.SUBSCRIPTIONS -> SubscriptionsScreen(viewModel = viewModel, )
                 AppTab.HELP -> HelpGuideScreen()
                 AppTab.ADMIN -> AdminScreen(viewModel = viewModel)
             }
