@@ -20,12 +20,13 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
-    - name: Build Android APK
+    - name: Build APK
       run: |
-        gradle assembleDebug -x test --no-daemon --stacktrace
+        chmod +x ./gradlew
+        ./gradlew assembleDebug -x test --no-daemon --stacktrace
 
-    - name: Upload APK
+    - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: hm-hammer-release-apk
+        name: hm-hammer-app
         path: app/build/outputs/apk/debug/*.apk
