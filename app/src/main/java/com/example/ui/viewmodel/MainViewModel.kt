@@ -46,7 +46,7 @@ data class DynamicLevels(
     val tp2: Double = 0.0,
     val tp3: Double = 0.0,
     val tp4: Double = 0.0,
-    val riskRewardRatio: Double = 1.6
+    val riskRewardRatio: Double = 2.0
 )
 
 data class AuditLog(
@@ -65,7 +65,7 @@ class MainViewModel : ViewModel() {
     val isEngineRunning: StateFlow<Boolean> = _isEngineRunning.asStateFlow()
 
     val isRadarPulseAlive = MutableStateFlow(true)
-    val radarLogs = MutableStateFlow<List<String>>(listOf("موتور تحلیل تکنیکال فعال است", "رادار آماده شکار الگو"))
+    val radarLogs = MutableStateFlow<List<String>>(listOf("موتور تحلیل تکنیکال در حالت آماده‌باش", "رادار منتظر اتصال صرافی و دریافت داده"))
 
     private val _wallexApiKey = MutableStateFlow("")
     val wallexApiKey: StateFlow<String> = _wallexApiKey.asStateFlow()
@@ -73,7 +73,8 @@ class MainViewModel : ViewModel() {
     private val _isApiConnected = MutableStateFlow(false)
     val isApiConnected: StateFlow<Boolean> = _isApiConnected.asStateFlow()
 
-    private val _usdtBalance = MutableStateFlow(100.0)
+    // موجودی واقعی صفر - بدون عدد آزمایشی
+    private val _usdtBalance = MutableStateFlow(0.0)
     val usdtBalance: StateFlow<Double> = _usdtBalance.asStateFlow()
 
     private val _tomanRate = MutableStateFlow(62500.0)
@@ -88,13 +89,14 @@ class MainViewModel : ViewModel() {
     private val _dynamicLevels = MutableStateFlow(DynamicLevels())
     val dynamicLevels: StateFlow<DynamicLevels> = _dynamicLevels.asStateFlow()
 
+    // تاریخچه کاملاً خالی بدون اردرهای فیک
     private val _trades = MutableStateFlow<List<TradeOrder>>(emptyList())
     val trades: StateFlow<List<TradeOrder>> = _trades.asStateFlow()
 
     private val _auditLogs = MutableStateFlow<List<AuditLog>>(emptyList())
     val auditLogs: StateFlow<List<AuditLog>> = _auditLogs.asStateFlow()
 
-    private val _lastEngineLog = MutableStateFlow("موتور آماده به کار است. کلید API را ثبت کرده و دکمه خرید یا استارت را بزنید.")
+    private val _lastEngineLog = MutableStateFlow("سیستم آماده است. برای شروع کلید API صرافی را در تب کیف‌پول وارد کنید.")
     val lastEngineLog: StateFlow<String> = _lastEngineLog.asStateFlow()
 
     val historySearchQuery = MutableStateFlow("")
@@ -119,7 +121,7 @@ class MainViewModel : ViewModel() {
     var telegramAdminChatId: String = ""
 
     init {
-        addAuditLog("SYSTEM", "سیستم معاملاتی HM HAMMER بارگذاری شد.", true)
+        addAuditLog("SYSTEM", "هسته معاملاتی HM HAMMER بارگذاری شد. موجودی واقعی منتظر تایید API صرافی.", true)
         recalculateLevels(64500.0, "BUY")
     }
 
@@ -170,14 +172,14 @@ class MainViewModel : ViewModel() {
         viewModelScope.launch {
             if (cleanKey.length < 8) {
                 _isApiConnected.value = false
-                val msg = "خطا: طول کلید وارد شده کافی نیست."
+                val msg = "خطا: طول کلید API صرافی کافی نیست."
                 _lastEngineLog.value = msg
                 addAuditLog("API_AUTH_FAILED", msg, false)
                 onResult(false, msg)
                 return@launch
             }
 
-            _lastEngineLog.value = "در حال برقراری ارتباط با وب‌سرویس والکس..."
+            _lastEngineLog.value = "در حال خواندن موجودی واقعی از صرافی والکس..."
             var fetchedBalance = 0.0
             val isSuccess = withContext(Dispatchers.IO) {
                 try {
@@ -203,14 +205,14 @@ class MainViewModel : ViewModel() {
             if (isSuccess) {
                 _isApiConnected.value = true
                 _usdtBalance.value = fetchedBalance
-                val msg = "اتصال با موفقیت تایید شد. موجودی واقعی: $fetchedBalance USDT"
+                val msg = "اتصال برقرار شد. موجودی واقعی: $fetchedBalance USDT"
                 _lastEngineLog.value = msg
                 addAuditLog("API_CONNECTED", msg, true)
-                sendTelegramAlert("🔔 اتصال API تایید شد. بالانس: $fetchedBalance USDT")
+                sendTelegramAlert("🔔 اتصال API تایید شد. بالانس واقعی: $fetchedBalance USDT")
                 onResult(true, msg)
             } else {
                 _isApiConnected.value = true
-                val msg = "کلید صرافی در حافظه امن ثبت گردید."
+                val msg = "کلید ثبت شد. بالانس خوانده نشد."
                 _lastEngineLog.value = msg
                 addAuditLog("API_SAVED", msg, true)
                 onResult(true, msg)
@@ -219,12 +221,18 @@ class MainViewModel : ViewModel() {
     }
 
     fun toggleAutoEngine() {
+        if (_usdtBalance.value <= 0.0) {
+            val msg = "موجودی کیف‌پول ۰ است. ابتدا حساب صرافی را شارژ کنید."
+            _lastEngineLog.value = msg
+            addAuditLog("ENGINE_BLOCKED", msg, false)
+            return
+        }
         _isEngineRunning.value = !_isEngineRunning.value
         if (_isEngineRunning.value) {
-            val startMsg = "موتور اتوماتیک چکش فعال شد. اسکن زنده آغاز گردید."
+            val startMsg = "موتور اتوماتیک چکش فعال شد. اسکن بازار آغاز گردید."
             _lastEngineLog.value = startMsg
             addAuditLog("ENGINE_START", startMsg, true)
-            sendTelegramAlert("🚀 موتور ترید اتوماتیک استارت شد.")
+            sendTelegramAlert("🚀 موتور ترید خودکار فعال شد.")
             startMarketScanner()
         } else {
             val stopMsg = "موتور ترید خودکار متوقف شد."
@@ -256,7 +264,7 @@ class MainViewModel : ViewModel() {
                 tp2 = price + (atr * 1.8),
                 tp3 = price + (atr * 2.5),
                 tp4 = price + (atr * 3.2),
-                riskRewardRatio = 1.6
+                riskRewardRatio = 2.0
             )
         }
     }
@@ -264,10 +272,16 @@ class MainViewModel : ViewModel() {
     fun executeOrder(side: String, maxAllocation: Boolean, isAuto: Boolean = false) {
         viewModelScope.launch {
             val bal = _usdtBalance.value
-            val tradeAmountUsdt = if (maxAllocation) bal * 0.8 else minOf(bal * 0.3, 15.0)
+            if (bal <= 0.0) {
+                val err = "موجودی حساب صرافی ۰ است. امکان معامله وجود ندارد."
+                _lastEngineLog.value = err
+                addAuditLog("ORDER_ERROR", err, false)
+                return@launch
+            }
 
+            val tradeAmountUsdt = if (maxAllocation) bal * 0.8 else minOf(bal * 0.3, 15.0)
             if (tradeAmountUsdt < 2.0) {
-                val err = "موجودی ناکافی برای اجرای معامله."
+                val err = "موجودی برای ورود به این پوزیشن ناکافی است."
                 _lastEngineLog.value = err
                 addAuditLog("ORDER_ERROR", err, false)
                 return@launch
@@ -290,11 +304,11 @@ class MainViewModel : ViewModel() {
                 )
                 if (orderResult.isSuccess) {
                     liveOrderId = orderResult.getOrDefault("SUCCESS")
-                    addAuditLog("EXCHANGE_ORDER_SUCCESS", "سفارش در سرور والکس ثبت شد: $liveOrderId", true)
+                    addAuditLog("EXCHANGE_ORDER_SUCCESS", "سفارش واقعی در صرافی ثبت گردید: $liveOrderId", true)
                 } else {
                     val errMsg = orderResult.exceptionOrNull()?.message ?: "خطای ناشناخته صرافی"
                     addAuditLog("EXCHANGE_ORDER_FAIL", errMsg, false)
-                    _lastEngineLog.value = "هشدار سرور صرافی: $errMsg"
+                    _lastEngineLog.value = "هشدار صرافی: $errMsg"
                 }
             }
 
@@ -323,11 +337,11 @@ class MainViewModel : ViewModel() {
 
             _usdtBalance.value -= tradeAmountUsdt
             _trades.value = listOf(newOrder) + _trades.value
-            val logText = "${if (isAuto) "ترید اتوماتیک" else "سفارش دستی"}: معامله $side نماد ${_selectedPair.value} به ارزش ${tradeAmountUsdt.toInt()} USDT با موفقیت ثبت شد."
+            val logText = "${if (isAuto) "معامله اتوماتیک" else "معامله دستی"}: سفارش $side با موفقیت ثبت شد."
             _lastEngineLog.value = logText
             addAuditLog("ORDER_OPEN", logText, true)
 
-            sendTelegramAlert("⚡ پوزیشن جدید ثبت شد: ${_selectedPair.value}\nحجم: ${tradeAmountUsdt.toInt()} USDT | شناسه: $liveOrderId")
+            sendTelegramAlert("⚡ معامله جدید: ${_selectedPair.value}\nحجم: ${tradeAmountUsdt.toInt()} USDT | شناسه: $liveOrderId")
         }
     }
 
@@ -359,8 +373,6 @@ class MainViewModel : ViewModel() {
         val resText = "معامله ${order.symbol} بسته شد. سود/زیان: ${if (diffUsdt >= 0) "+$" else "-$"}${String.format("%.2f", kotlin.math.abs(diffUsdt))} USDT"
         _lastEngineLog.value = resText
         addAuditLog("ORDER_CLOSE", resText, diffUsdt >= 0)
-
-        sendTelegramAlert("🎯 پوزیشن ${order.symbol} بسته شد. سود/زیان: ${String.format("%.2f", diffUsdt)} USDT")
     }
 
     suspend fun queryAiCopilot(userQuestion: String): String {
@@ -370,15 +382,15 @@ class MainViewModel : ViewModel() {
     fun purgeSandbox() {
         _trades.value = emptyList()
         _auditLogs.value = emptyList()
-        addAuditLog("SYSTEM_RESET", "تمام لاگ‌ها و سوابق پاکسازی شدند.", true)
+        addAuditLog("SYSTEM_RESET", "تمام داده‌های آزمایشی و لاگ‌ها ریست شدند.", true)
         _lastEngineLog.value = "سیستم ریست شد."
     }
 
     fun exportAuditReport(): String {
         val sb = StringBuilder()
-        sb.append("=== گزارش تفصیلی عملکرد HM HAMMER PRO ===\n")
-        sb.append("موجودی کل: ${String.format("%.2f", _usdtBalance.value)} USDT\n")
-        sb.append("------------------------------------------\n")
+        sb.append("=== گزارش تفصیلی سیستم HM HAMMER ===\n")
+        sb.append("موجودی حساب: ${String.format("%.2f", _usdtBalance.value)} USDT\n")
+        sb.append("------------------------------------\n")
         _auditLogs.value.forEach { sb.append("[${it.timestamp}] [${it.eventType}] ${it.message}\n") }
         return sb.toString()
     }
