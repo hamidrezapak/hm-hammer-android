@@ -1,5 +1,11 @@
 package com.example.ui.screens
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -10,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,58 +44,76 @@ data class SubscriptionPlan(
 
 @Composable
 fun SubscriptionsScreen(viewModel: MainViewModel) {
+    val context = LocalContext.current
     val tomanRate by viewModel.tomanRate.collectAsState()
     val formatter = remember { DecimalFormat("#,###") }
 
     val plans = listOf(
-        SubscriptionPlan(
-            id = "BRONZE",
-            titleFa = "پلن برنزی (پایه)",
-            titleEn = "Bronze Plan",
-            basePriceUsdt = 19.0,
-            badgeColor = Color(0xFFCD7F32),
-            maxCapitalAllocation = "حداکثر ورود سرمایه: تا ۲۰۰ تتر",
-            maxConcurrentTrades = "حداکثر ۱ پوزیشن همزمان",
-            description = "تحلیل الگوی چکش روی تمام کندل‌ها + مدیریت ریسک پایه",
-            hasDurationSelection = false
-        ),
-        SubscriptionPlan(
-            id = "SILVER",
-            titleFa = "پلن نقره‌ای (استاندارد)",
-            titleEn = "Silver Plan",
-            basePriceUsdt = 39.0,
-            badgeColor = Color(0xFFC0C0C0),
-            maxCapitalAllocation = "حداکثر ورود سرمایه: تا ۵۰۰ تتر",
-            maxConcurrentTrades = "حداکثر ۳ پوزیشن همزمان",
-            description = "اسکن تمام تایم‌فریم‌ها + سطوح دینامیک فیبوناچی و استاپ اتوماتیک",
-            hasDurationSelection = false
-        ),
-        SubscriptionPlan(
-            id = "GOLD",
-            titleFa = "پلن طلایی (پرو مکس)",
-            titleEn = "Gold Pro Max",
-            basePriceUsdt = 79.0,
-            badgeColor = Color(0xFFFFD700),
-            maxCapitalAllocation = "حداکثر ورود سرمایه: تا ۱۵۰۰ تتر",
-            maxConcurrentTrades = "حداکثر ۵ پوزیشن همزمان",
-            description = "اجرای آنی پوزیشن‌ها روی تمام کندل‌ها + هوش مصنوعی تحلیلی زنده",
-            hasDurationSelection = true
-        ),
-        SubscriptionPlan(
-            id = "VIP_MASTER",
-            titleFa = "پلن VIP مستر (نامحدود)",
-            titleEn = "VIP Master",
-            basePriceUsdt = 149.0,
-            badgeColor = Color(0xFF00E676),
-            maxCapitalAllocation = "حداکثر ورود سرمایه: بدون محدودیت حجم",
-            maxConcurrentTrades = "معاملات همزمان نامحدود",
-            description = "اولویت دسترسی سرور + موتور فوق‌سریع چکش + پشتیبانی اختصاصی ترید",
-            hasDurationSelection = true
-        )
+        SubscriptionPlan("BRONZE", "پلن برنزی (پایه)", "Bronze Plan", 19.0, Color(0xFFCD7F32), "ورود سرمایه: تا ۲۰۰ تتر", "۱ پوزیشن همزمان", "تحلیل الگوی چکش + استراتژی کم‌ریسک", false),
+        SubscriptionPlan("SILVER", "پلن نقره‌ای (استاندارد)", "Silver Plan", 39.0, Color(0xFFC0C0C0), "ورود سرمایه: تا ۵۰۰ تتر", "۳ پوزیشن همزمان", "اسکن چندتایم‌فریمه + سطوح فیبوناچی و تریلینگ استاپ", false),
+        SubscriptionPlan("GOLD", "پلن طلایی (پرو مکس)", "Gold Pro Max", 79.0, Color(0xFFFFD700), "ورود سرمایه: تا ۱۵۰۰ تتر", "۵ پوزیشن همزمان", "اجرای سریع اردرها + هوش مصنوعی تحلیلی زنده", true),
+        SubscriptionPlan("VIP_MASTER", "پلن VIP مستر (نامحدود)", "VIP Master", 149.0, Color(0xFF00E676), "بدون سقف سرمایه", "معاملات همزمان نامحدود", "اولویت سرور + هوش مصنوعی نامحدود + پشتیبانی اختصاصی", true)
     )
 
     var goldDuration by remember { mutableStateOf(PlanDuration.ONE_MONTH) }
     var vipDuration by remember { mutableStateOf(PlanDuration.ONE_MONTH) }
+
+    var selectedPlanForPayment by remember { mutableStateOf<Triple<SubscriptionPlan, Int, Long>?>(null) }
+
+    // دیالوگ اتصال به درگاه پرداخت / والت
+    if (selectedPlanForPayment != null) {
+        val (plan, usdt, toman) = selectedPlanForPayment!!
+        val usdtWalletAddress = "TYDzsxdjhRoVNipmYnPWv5vWWBc5zGo6bp" // ولت دریافت تتر (TRC20)
+
+        AlertDialog(
+            onDismissRequest = { selectedPlanForPayment = null },
+            containerColor = Color(0xFF161B22),
+            title = { Text("پرداخت و فعال‌سازی اشتراک", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("پلن انتخابی: ${plan.titleFa}", color = plan.badgeColor, fontWeight = FontWeight.Bold)
+                    Text("مبلغ قابل پرداخت: $usdt تتر (${formatter.format(toman)} تومان)", color = Color.White, fontSize = 13.sp)
+                    HorizontalDivider(color = Color(0xFF30363D))
+                    
+                    Text("روش پرداخت را انتخاب کنید:", color = Color.Gray, fontSize = 12.sp)
+                    
+                    Button(
+                        onClick = {
+                            val zarinpalUrl = "https://zarinp.al/hmhammer?amount=$toman"
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(zarinpalUrl))
+                            context.startActivity(intent)
+                            selectedPlanForPayment = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF238636)),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("پرداخت ریالی (درگاه آنلاین بانکی)", color = Color.White, fontSize = 12.sp)
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clip = ClipData.newPlainText("USDT Address", usdtWalletAddress)
+                            clipboard.setPrimaryClip(clip)
+                            Toast.makeText(context, "آدرس کیف‌پول USDT TRC20 کپی شد.", Toast.LENGTH_LONG).show()
+                            selectedPlanForPayment = null
+                        },
+                        border = BorderStroke(1.dp, Color(0xFF38BDF8)),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("کپی آدرس کیف‌پول تتر (USDT TRC20)", color = Color(0xFF38BDF8), fontSize = 12.sp)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { selectedPlanForPayment = null }) {
+                    Text("انصراف", color = Color.Gray)
+                }
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -166,7 +191,6 @@ fun SubscriptionsScreen(viewModel: MainViewModel) {
                             Text(plan.maxConcurrentTrades, color = Color.Gray, fontSize = 11.sp)
                         }
 
-                        // انتخابگر دوره فقط برای پلن‌های طلایی و VIP
                         if (plan.hasDurationSelection) {
                             HorizontalDivider(color = Color(0xFF21262D), thickness = 1.dp)
                             Text("انتخاب دوره زمانی اشتراک:", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -205,38 +229,24 @@ fun SubscriptionsScreen(viewModel: MainViewModel) {
 
                         HorizontalDivider(color = Color(0xFF21262D), thickness = 1.dp)
 
-                        // بخش قیمت ریالی و دلاری
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
-                                Text(
-                                    "${formatter.format(finalPriceToman)} تومان",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp
-                                )
-                                Text(
-                                    "معادل $finalPriceUsdt تتر (USDT)",
-                                    color = Color(0xFF38BDF8),
-                                    fontSize = 11.sp
-                                )
+                                Text("${formatter.format(finalPriceToman)} تومان", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text("معادل $finalPriceUsdt تتر (USDT)", color = Color(0xFF38BDF8), fontSize = 11.sp)
                             }
 
                             Button(
                                 onClick = {
-                                    viewModel.addAuditLog(
-                                        "PLAN_SELECT",
-                                        "پلن ${plan.titleFa} (${selectedDuration.titleFa}) به ارزش $finalPriceUsdt USDT انتخاب شد.",
-                                        true
-                                    )
+                                    selectedPlanForPayment = Triple(plan, finalPriceUsdt, finalPriceToman)
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = plan.badgeColor),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
-                                Text("انتخاب پلن", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                Text("خرید اشتراک", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                             }
                         }
                     }
