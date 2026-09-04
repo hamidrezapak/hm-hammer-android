@@ -1,3 +1,4 @@
+import com.example.ai.AICopilotEngine
 package com.example.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
@@ -364,34 +365,8 @@ class MainViewModel : ViewModel() {
         sendTelegramAlert("🎯 پوزیشن ${order.symbol} بسته شد. سود/زیان: ${String.format("%.2f", diffUsdt)} USDT")
     }
 
-    fun queryAiCopilot(userQuestion: String): String {
-        val levels = _dynamicLevels.value
-        val price = _currentPrice.value
-        val pair = _selectedPair.value
-        val bal = _usdtBalance.value
-        val q = userQuestion.lowercase(Locale.ROOT)
-
-        return when {
-            q.contains("خرید") || q.contains("سیگنال") || q.contains("ورود") -> {
-                "سیگنال ورود الگوریتم چکش برای $pair:\n" +
-                "کندل چکش تایید شده در سطح $$price با حجم نقدینگی مناسب تشکیل شده است. ورود با حد ضرر $${String.format("%.1f", levels.stopLoss)} و تارگت $${String.format("%.1f", levels.tp1)} توصیه می‌شود."
-            }
-            q.contains("ریسک") || q.contains("سرمایه") || q.contains("بالانس") -> {
-                "تحلیل ریسک و مدیریت سرمایه:\n" +
-                "کل موجودی: $${String.format("%.2f", bal)} USDT.\n" +
-                "سقف ریسک هر معامله: ۲٪ معادل $${String.format("%.2f", bal * 0.02)} USDT با نسبت سود به زیان ${levels.riskRewardRatio}."
-            }
-            q.contains("استاپ") || q.contains("ضرر") || q.contains("تارگت") -> {
-                "سطوح دینامیک فیبوناچی برای $pair:\n" +
-                "• حد ضرر محافظتی: $${String.format("%.1f", levels.stopLoss)}\n" +
-                "• هدف اول (TP1): $${String.format("%.1f", levels.tp1)}\n" +
-                "• هدف دوم (TP2): $${String.format("%.1f", levels.tp2)}"
-            }
-            else -> {
-                "وضعیت رادار هوش مصنوعی:\n" +
-                "نماد $pair در محدوده $$price با فیلتر EMA200 در وضعیت روند صعودی پایدار ارزیابی می‌شود. سیستم آماده اجرای سفارشات طبق پارامترهای الگوریتم است."
-            }
-        }
+    suspend fun queryAiCopilot(userQuestion: String): String {
+        return AICopilotEngine.queryRealAi(_selectedPair.value, _currentPrice.value, userQuestion)
     }
 
     fun purgeSandbox() {

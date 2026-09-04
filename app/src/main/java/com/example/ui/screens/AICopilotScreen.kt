@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.DarkNavyBg
 import com.example.ui.viewmodel.MainViewModel
+import kotlinx.coroutines.launch
 
 data class ChatMessage(val sender: String, val message: String, val isAi: Boolean)
 
@@ -24,14 +25,18 @@ fun AICopilotScreen(
     viewModel: MainViewModel,
     currentLanguage: Any? = null
 ) {
+    val coroutineScope = rememberCoroutineScope()
+    val selectedPair by viewModel.selectedPair.collectAsState()
+
     var messages by remember {
         mutableStateOf(
             listOf(
-                ChatMessage("HM AI", "دستیار هوشمند الگوریتم چکش متصل است. آنالیز کندل‌های زنده، سطوح فیبوناچی و ارزیابی ریسک فعال می‌باشد. سوال یا درخواست تحلیل خود را مطرح کنید:", true)
+                ChatMessage("HM AI", "دستیار هوش مصنوعی واقعی HM HAMMER متصل است (Qwen 27B). سوال، تحلیل ارز یا استراتژی خود را بپرسید:", true)
             )
         )
     }
     var inputText by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -52,8 +57,8 @@ fun AICopilotScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("دستیار هوش مصنوعی HM HAMMER", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Text("آنالیز جریان سفارشات و کندل چکش", color = Color(0xFF00E676), fontSize = 10.sp)
+                    Text("دستیار هوش مصنوعی زنده HM HAMMER", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text("مدل پردازش زنده: Qwen 27B • $selectedPair", color = Color(0xFF00E676), fontSize = 10.sp)
                 }
                 Surface(
                     color = Color(0xFF38BDF8).copy(alpha = 0.2f),
@@ -77,7 +82,7 @@ fun AICopilotScreen(
                         color = bg,
                         shape = RoundedCornerShape(10.dp),
                         border = BorderStroke(1.dp, if (msg.isAi) Color(0xFF30363D) else Color(0xFF2EA043)),
-                        modifier = Modifier.widthIn(max = 300.dp)
+                        modifier = Modifier.widthIn(max = 320.dp)
                     ) {
                         Column(modifier = Modifier.padding(10.dp)) {
                             Text(msg.sender, color = if (msg.isAi) Color(0xFF38BDF8) else Color(0xFFE6EDF3), fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -89,13 +94,18 @@ fun AICopilotScreen(
             }
         }
 
+        if (isLoading) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = Color(0xFF38BDF8))
+        }
+
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = inputText,
                 onValueChange = { inputText = it },
-                placeholder = { Text("تحلیل یا سوال از بازار...", color = Color.Gray, fontSize = 11.sp) },
+                placeholder = { Text("تحلیل یا سوال از هوش مصنوعی...", color = Color.Gray, fontSize = 11.sp) },
                 modifier = Modifier.weight(1f),
                 singleLine = true,
+                enabled = !isLoading,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White,
@@ -106,13 +116,19 @@ fun AICopilotScreen(
             Spacer(modifier = Modifier.width(8.dp))
             Button(
                 onClick = {
-                    if (inputText.isNotBlank()) {
+                    if (inputText.isNotBlank() && !isLoading) {
                         val query = inputText.trim()
-                        val response = viewModel.queryAiCopilot(query)
-                        messages = messages + ChatMessage("شما", query, false) + ChatMessage("HM AI", response, true)
                         inputText = ""
+                        messages = messages + ChatMessage("شما", query, false)
+                        isLoading = true
+                        coroutineScope.launch {
+                            val reply = viewModel.queryAiCopilot(query)
+                            messages = messages + ChatMessage("HM AI", reply, true)
+                            isLoading = false
+                        }
                     }
                 },
+                enabled = !isLoading,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF38BDF8)),
                 shape = RoundedCornerShape(8.dp)
             ) {
