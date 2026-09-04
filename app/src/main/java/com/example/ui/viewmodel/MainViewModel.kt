@@ -1,8 +1,8 @@
-import com.example.ai.AICopilotEngine
 package com.example.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.ai.AICopilotEngine
 import com.example.model.TradeOrder
 import com.example.model.TradeStatus
 import com.example.network.WallexLiveClient
@@ -278,7 +278,6 @@ class MainViewModel : ViewModel() {
             val amountTmn = tradeAmountUsdt * _tomanRate.value
             val quantity = tradeAmountUsdt / price
 
-            // ارسال درخواست به سرور صرافی در صورت وجود کلید
             var liveOrderId = "LOCAL_EXEC"
             val currentApiKey = _wallexApiKey.value
             if (currentApiKey.isNotBlank()) {
@@ -342,7 +341,6 @@ class MainViewModel : ViewModel() {
         val multiplier = if (isProfit) 1.045 else 0.98
         val payout = tradeAmountUsdt * multiplier
         val diffUsdt = payout - tradeAmountUsdt
-        val diffTmn = diffUsdt * _tomanRate.value
 
         _usdtBalance.value += payout
         _trades.value = _trades.value.map {
