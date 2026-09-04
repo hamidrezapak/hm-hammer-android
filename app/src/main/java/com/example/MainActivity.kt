@@ -6,18 +6,14 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.example.ui.components.AppTabBar
-import com.example.ui.components.HeaderPulseBar
-import com.example.ui.components.LanguageOption
 import com.example.ui.screens.*
 import com.example.ui.theme.DarkNavyBg
-import com.example.ui.theme.LocalAppLanguage
+import com.example.ui.theme.HMHammerTheme
 import com.example.ui.viewmodel.AppTab
 import com.example.ui.viewmodel.MainViewModel
 
@@ -27,66 +23,40 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            var selectedLanguage by remember { mutableStateOf(LanguageOption.FA) }
-            val isRtl = selectedLanguage == LanguageOption.FA || selectedLanguage == LanguageOption.AR
-            val layoutDirection = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
-
-            CompositionLocalProvider(
-                LocalLayoutDirection provides layoutDirection,
-                LocalAppLanguage provides selectedLanguage
-            ) {
-                MainAppScreen(
-                    viewModel = viewModel,
-                    currentLanguage = selectedLanguage,
-                    onLanguageChanged = { selectedLanguage = it }
-                )
+            HMHammerTheme {
+                MainAppScreen(viewModel = viewModel)
             }
         }
     }
 }
 
 @Composable
-fun MainAppScreen(
-    viewModel: MainViewModel,
-    currentLanguage: LanguageOption = LanguageOption.FA,
-    onLanguageChanged: (LanguageOption) -> Unit = {}
-) {
+fun MainAppScreen(viewModel: MainViewModel) {
     val currentTab by viewModel.currentTab.collectAsState()
-    val isPulseAlive by viewModel.isRadarPulseAlive.collectAsState()
 
     Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(DarkNavyBg),
-        containerColor = DarkNavyBg
+        modifier = Modifier.fillMaxSize(),
+        bottomBar = {
+            AppTabBar(
+                currentTab = currentTab,
+                onTabSelected = { viewModel.setTab(it) }
+            )
+        }
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(DarkNavyBg)
                 .padding(innerPadding)
         ) {
-            HeaderPulseBar(
-                isAlive = isPulseAlive,
-                isPulseAlive = isPulseAlive,
-                ,
-                onLanguageSelected = onLanguageChanged
-            )
-
-            AppTabBar(
-                selectedTab = currentTab,
-                onTabSelected = { viewModel.setTab(it) },
-                ,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-            )
-
             when (currentTab) {
-                AppTab.CHART -> ChartRadarScreen(viewModel = viewModel)
                 AppTab.TRADE -> TradeScreen(viewModel = viewModel)
+                AppTab.CHART -> ChartRadarScreen(viewModel = viewModel)
                 AppTab.AI_COPILOT -> AICopilotScreen(viewModel = viewModel)
                 AppTab.HISTORY -> TransactionHistoryScreen(viewModel = viewModel)
-                AppTab.WALLET -> WalletScreen(viewModel = viewModel, )
+                AppTab.WALLET -> WalletScreen(viewModel = viewModel)
                 AppTab.PERFORMANCE -> PerformanceScreen(viewModel = viewModel)
-                AppTab.SUBSCRIPTIONS -> SubscriptionsScreen(viewModel = viewModel, )
+                AppTab.SUBSCRIPTIONS -> SubscriptionsScreen(viewModel = viewModel)
                 AppTab.HELP -> HelpGuideScreen()
                 AppTab.ADMIN -> AdminScreen(viewModel = viewModel)
             }
