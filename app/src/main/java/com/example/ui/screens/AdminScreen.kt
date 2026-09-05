@@ -15,32 +15,28 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.viewmodel.MainViewModel
 
-data class RegisteredAdminUser(
-    val username: String,
+data class AuthorizedAccount(
+    val title: String,
     val role: String,
     val planType: String,
-    val status: String,
-    val isPrimary: Boolean = false
+    val status: String
 )
 
 @Composable
 fun AdminScreen(viewModel: MainViewModel) {
-    // فقط دو مدیر اصلی ثبت هستند؛ هر کاربر جدید بر اساس خرید پلن اضافه می‌شود
-    val usersList = remember {
+    val accounts = remember {
         mutableStateListOf(
-            RegisteredAdminUser(
-                username = "حمیدرضا پاکنژاد",
-                role = "مدیر ارشد و موسس",
-                planType = "دسترسی مادام‌العمر (Full Pro)",
-                status = "فعال",
-                isPrimary = true
+            AuthorizedAccount(
+                title = "هسته معاملات الگوریتمی همر (Hammer Core Engine)",
+                role = "مدیریت الگوریتم‌های کوانت و استراتژی چکش",
+                planType = "دسترسی نامحدود VIP",
+                status = "فعال و متصل"
             ),
-            RegisteredAdminUser(
-                username = "محمد (@masjedi6913)",
-                role = "شریک تجاری و مدیر سیستم",
-                planType = "دسترسی مادام‌العمر (Full Pro)",
-                status = "فعال",
-                isPrimary = true
+            AuthorizedAccount(
+                title = "موتور اجرای پرسرعت و پایپ‌لاین دادگان (Hammer Pipeline & Execution Engine)",
+                role = "همگام‌سازی بلادرنگ OrderBook، مانیتورینگ WebSocket و اجرای کم‌تاخیر API",
+                planType = "دسترسی نامحدود زیرساخت",
+                status = "فعال و متصل"
             )
         )
     }
@@ -57,23 +53,23 @@ fun AdminScreen(viewModel: MainViewModel) {
             shape = RoundedCornerShape(12.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("پنل مدیریت دسترسی و لایسنس کاربران", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text("پنل نظارت بر زیرساخت و کاربران", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "کاربران به صورت خودکار پس از خرید یکی از پلن‌های اشتراک فعال خواهند شد.",
+                    text = "کاربران مجاز صرفاً پس از فعال‌سازی اشتراک‌های معتبر در این بخش لیست و احراز هویت می‌شوند.",
                     color = Color.LightGray,
                     fontSize = 12.sp
                 )
             }
         }
 
-        Text("لیست حساب‌های مجاز و مشترکین فعال", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Text("گره‌های اجرایی الگوریتمی و حساب‌های فعال", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
 
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            items(usersList) { user ->
+            items(accounts) { acc ->
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
                     shape = RoundedCornerShape(10.dp)
@@ -85,17 +81,18 @@ fun AdminScreen(viewModel: MainViewModel) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(user.username, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Text(user.role, color = Color.Gray, fontSize = 11.sp)
-                            Text("پلن: ${user.planType}", color = Color(0xFF00E5FF), fontSize = 11.sp)
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
+                            Text(acc.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text(acc.role, color = Color.Gray, fontSize = 11.sp, lineHeight = 16.sp)
+                            Text("پلن: ${acc.planType}", color = Color(0xFF00E5FF), fontSize = 11.sp)
                         }
+                        Spacer(modifier = Modifier.width(8.dp))
                         Surface(
                             color = Color(0xFF00E676).copy(alpha = 0.15f),
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
-                                text = user.status,
+                                text = acc.status,
                                 color = Color(0xFF00E676),
                                 fontSize = 11.sp,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
