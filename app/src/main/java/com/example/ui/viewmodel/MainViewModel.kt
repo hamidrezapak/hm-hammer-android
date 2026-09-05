@@ -166,38 +166,48 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    fun verifyAndSaveWallexKey(apiKey: String, onResult: (Boolean, String) -> Unit) {
+        fun verifyAndSaveWallexKey(apiKey: String, onResult: (Boolean, String) -> Unit) {
         val cleanKey = apiKey.trim()
         _wallexApiKey.value = cleanKey
         viewModelScope.launch {
             if (cleanKey.length < 8) {
                 _isApiConnected.value = false
-                val msg = "خطا: طول کلید API صرافی کافی نیست."
+                val msg = "کلید API نامعتبر است (حداقل ۸ کاراکتر)"
                 _lastEngineLog.value = msg
-                addAuditLog("API_AUTH_FAILED", msg, false)
                 onResult(false, msg)
                 return@launch
             }
 
-            _lastEngineLog.value = "در حال خواندن موجودی واقعی از صرافی والکس..."
+            _lastEngineLog.value = "در حال احراز هویت و دریافت موجودی..."
             var fetchedBalance = 0.0
+            var errorDetail = ""
+            
             val isSuccess = withContext(Dispatchers.IO) {
                 try {
-                    val url = URL("https://api.wallex.ir/v1/account/balances")
-                    val conn = url.openConnection() as HttpURLConnection
+                    val url = java.net.URL("https://api.wallex.ir/v1/account/balances")
+                    val conn = url.openConnection() as java.net.HttpURLConnection
                     conn.requestMethod = "GET"
                     conn.setRequestProperty("X-API-Key", cleanKey)
                     conn.connectTimeout = 8000
                     conn.readTimeout = 8000
-                    if (conn.responseCode in 200..299) {
-                        val response = conn.inputStream.bufferedReader().readText()
-                        val json = JSONObject(response)
-                        val balances = json.optJSONObject("result")?.optJSONObject("balances")
+
+                    val code = conn.responseCode
+                    val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+                    val response = stream.bufferedReader().readText()
+
+                    if (code in 200..299) {
+                        val json = org.json.JSONObject(response)
+                        val resultObj = json.optJSONObject("result")
+                        val balances = resultObj?.optJSONObject("balances")
                         val usdtObj = balances?.optJSONObject("USDT")
                         fetchedBalance = usdtObj?.optDouble("value", 0.0) ?: 0.0
                         true
-                    } else false
+                    } else {
+                        errorDetail = "خطای صرافی ($code): $response"
+                        false
+                    }
                 } catch (e: Exception) {
+                    errorDetail = "خطای اتصال شبکه: ${e.localizedMessage}"
                     false
                 }
             }
@@ -205,17 +215,17 @@ class MainViewModel : ViewModel() {
             if (isSuccess) {
                 _isApiConnected.value = true
                 _usdtBalance.value = fetchedBalance
-                val msg = "اتصال برقرار شد. موجودی واقعی: $fetchedBalance USDT"
-                _lastEngineLog.value = msg
-                addAuditLog("API_CONNECTED", msg, true)
-                sendTelegramAlert("🔔 اتصال API تایید شد. بالانس واقعی: $fetchedBalance USDT")
-                onResult(true, msg)
+                val successMsg = "اتصال برقرار شد. موجودی: $fetchedBalance USDT"
+                _lastEngineLog.value = successMsg
+                try {
+                    SecureKeyStore.saveKey(cleanKey)
+                } catch (e: Exception) {}
+                onResult(true, successMsg)
             } else {
-                _isApiConnected.value = true
-                val msg = "کلید ثبت شد. بالانس خوانده نشد."
-                _lastEngineLog.value = msg
-                addAuditLog("API_SAVED", msg, true)
-                onResult(true, msg)
+                _isApiConnected.value = false
+                val failMsg = if (errorDetail.isNotBlank()) errorDetail else "عدم موفقیت در احراز کلید"
+                _lastEngineLog.value = failMsg
+                onResult(false, failMsg)
             }
         }
     }
