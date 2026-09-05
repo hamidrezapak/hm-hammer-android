@@ -30,30 +30,23 @@ object WallexLiveClient {
         return Math.round(price * factor) / factor
     }
 
-    // ارسال سفارش زنده با کنترل لغزش هوشمند (Slippage) و تلاش مجدد (Retry)
-    suspend fun placeOrderWithRetry(
+    suspend fun placeOrder(
         apiKey: String,
         symbol: String,
-        side: String,
+        type: String,
         quantity: Double,
-        price: Double,
-        leverageMultiplier: Double = 1.0,
-        maxRetries: Int = 3
+        price: Double
     ): Result<String> = withContext(Dispatchers.IO) {
-        val adjustedQty = quantity * leverageMultiplier
-        val cleanQty = formatQuantity(symbol, adjustedQty)
-        
-        // محاسبه قیمت اردر با 0.15% لغزش برای پر شدن آنی در اوردر‌بوک
-        val slippage = if (side.equals("buy", ignoreCase = true)) 1.0015 else 0.9985
+        val cleanQty = formatQuantity(symbol, quantity)
+        val slippage = if (type.equals("buy", ignoreCase = true)) 1.0015 else 0.9985
         val aggressivePrice = formatPrice(symbol, price * slippage)
 
-        // بررسی حداقل ارزش معامله صرافی (حداقل 2.5 تتر)
         if (cleanQty * aggressivePrice < 2.0) {
             return@withContext Result.failure(Exception("ارزش کل سفارش کمتر از حداقل مجاز صرافی (2 USDT) است."))
         }
 
         var lastException: Exception? = null
-        for (attempt in 1..maxRetries) {
+        for (attempt in 1..3) {
             try {
                 val url = URL("$BASE_URL/orders")
                 val conn = url.openConnection() as HttpURLConnection
@@ -66,7 +59,7 @@ object WallexLiveClient {
 
                 val payload = JSONObject().apply {
                     put("symbol", symbol)
-                    put("type", side.lowercase(Locale.ROOT))
+                    put("type", type.lowercase(Locale.ROOT))
                     put("order_type", "limit")
                     put("quantity", cleanQty)
                     put("price", aggressivePrice)
@@ -88,8 +81,8 @@ object WallexLiveClient {
             } catch (e: Exception) {
                 lastException = e
             }
-            if (attempt < maxRetries) delay(1000)
+            if (attempt < 3) delay(1000)
         }
-        Result.failure(lastException ?: Exception("عدم موفقیت در اتصال به سرور صرافی پس از $maxRetries تلاش."))
+        Result.failure(lastException ?: Exception("عدم اتصال به صرافی پس از ۳ تلاش مجدد."))
     }
 }
