@@ -20,12 +20,72 @@ import com.example.ui.viewmodel.MainViewModel
 fun TradeScreen(viewModel: MainViewModel) {
     var selectedLeverage by remember { mutableStateOf("1x") }
     var selectedAllocation by remember { mutableStateOf(25) }
+    var showApiDialog by remember { mutableStateOf(false) }
+    var apiKeyInput by remember { mutableStateOf("") }
+    var apiSecretInput by remember { mutableStateOf("") }
+    var apiMessage by remember { mutableStateOf("") }
+
     val isRunning by viewModel.isEngineRunning.collectAsState()
     val isApiConnected by viewModel.isApiConnected.collectAsState()
     val currentPair by viewModel.selectedPair.collectAsState()
 
     val leverages = listOf("1x", "2x", "5x", "10x", "20x", "50x")
     val allocations = listOf(10, 25, 50, 75, 100)
+
+    if (showApiDialog) {
+        AlertDialog(
+            onDismissRequest = { showApiDialog = false },
+            title = { Text("اتصال کلید صرافی (API Keys)", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = apiKeyInput,
+                        onValueChange = { apiKeyInput = it },
+                        label = { Text("API Key") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFF00E5FF),
+                            focusedLabelColor = Color(0xFF00E5FF)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = apiSecretInput,
+                        onValueChange = { apiSecretInput = it },
+                        label = { Text("API Secret") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFF00E5FF),
+                            focusedLabelColor = Color(0xFF00E5FF)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (apiMessage.isNotBlank()) {
+                        Text(apiMessage, color = Color(0xFFFFB300), fontSize = 12.sp)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.verifyAndSaveWallexKey(apiKeyInput, apiSecretInput) { success, msg ->
+                            apiMessage = msg
+                            if (success) showApiDialog = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853))
+                ) {
+                    Text("ذخیره و اتصال")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showApiDialog = false }) {
+                    Text("انصراف", color = Color.Gray)
+                }
+            },
+            containerColor = Color(0xFF161B22)
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -35,6 +95,7 @@ fun TradeScreen(viewModel: MainViewModel) {
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // نوار جفت‌ارز، وضعیت اتصال و دکمه اختصاصی تنظیم API
         Card(
             colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
             shape = RoundedCornerShape(12.dp)
@@ -42,34 +103,62 @@ fun TradeScreen(viewModel: MainViewModel) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(14.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("جفت‌ارز فعال", color = Color.Gray, fontSize = 12.sp)
-                    Text(currentPair, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("جفت‌ارز معاملاتی", color = Color.Gray, fontSize = 11.sp)
+                    Text(currentPair, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
-                Surface(
-                    color = if (isApiConnected) Color(0xFF00E676).copy(alpha = 0.2f) else Color(0xFFFF5252).copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(8.dp)
+                
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = if (isApiConnected) "صرافی متصل" else "عدم اتصال به API",
-                        color = if (isApiConnected) Color(0xFF00E676) else Color(0xFFFF5252),
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                    )
+                    Button(
+                        onClick = { showApiDialog = true },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isApiConnected) Color(0xFF1B5E20) else Color(0xFFE65100)
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = if (isApiConnected) "API متصل است" else "تنظیم و اتصال API",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
 
+        // دکمه استارت/توقف اجرای خودکار ربات معامله‌گر
+        Button(
+            onClick = { viewModel.toggleAutoEngine() },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isRunning) Color(0xFFC62828) else Color(0xFF00C853)
+            ),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth().height(52.dp)
+        ) {
+            Text(
+                text = if (isRunning) "■ توقف موتور ترید خودکار" else "▶ استارت ترید خودکار بر اساس استراتژی زنده",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        }
+
+        // انتخاب اهرم (Leverage Multipliers)
         Card(
             colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
             shape = RoundedCornerShape(12.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("ضریب اهرم معاملاتی (Leverage)", color = Color(0xFF00E5FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("ضریب اهرم معاملاتی (Leverage)", color = Color(0xFF00E5FF), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -99,12 +188,13 @@ fun TradeScreen(viewModel: MainViewModel) {
             }
         }
 
+        // انتخاب درصد حجم سرمایه
         Card(
             colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
             shape = RoundedCornerShape(12.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("درصد تخصیص حجم معامله", color = Color.LightGray, fontSize = 14.sp)
+                Text("تخصیص حجم موجودی", color = Color.LightGray, fontSize = 13.sp)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -115,7 +205,7 @@ fun TradeScreen(viewModel: MainViewModel) {
                             modifier = Modifier
                                 .weight(1f)
                                 .background(
-                                    if (isSelected) Color(0xFF388E3C) else Color(0xFF21262D),
+                                    if (isSelected) Color(0xFF00B0FF) else Color(0xFF21262D),
                                     shape = RoundedCornerShape(8.dp)
                                 )
                                 .clickable { selectedAllocation = alloc }
@@ -134,6 +224,7 @@ fun TradeScreen(viewModel: MainViewModel) {
             }
         }
 
+        // سفارش دستی فوری خرید / فروش
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -142,34 +233,19 @@ fun TradeScreen(viewModel: MainViewModel) {
                 onClick = { viewModel.executeOrder("BUY", true) },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853)),
                 shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.weight(1f).height(50.dp)
+                modifier = Modifier.weight(1f).height(48.dp)
             ) {
-                Text("خرید سریع (BUY)", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text("خرید سریع (BUY)", fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
 
             Button(
                 onClick = { viewModel.executeOrder("SELL", true) },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD50000)),
                 shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.weight(1f).height(50.dp)
+                modifier = Modifier.weight(1f).height(48.dp)
             ) {
-                Text("فروش سریع (SELL)", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text("فروش سریع (SELL)", fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
-        }
-
-        Button(
-            onClick = { viewModel.toggleAutoEngine() },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (isRunning) Color(0xFFC62828) else Color(0xFF0277BD)
-            ),
-            shape = RoundedCornerShape(10.dp),
-            modifier = Modifier.fillMaxWidth().height(52.dp)
-        ) {
-            Text(
-                text = if (isRunning) "توقف اضطراری ربات معامله‌گر" else "فعال‌سازی ربات بر اساس استراتژی زنده",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold
-            )
         }
     }
 }
