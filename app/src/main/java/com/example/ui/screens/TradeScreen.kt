@@ -19,13 +19,13 @@ import com.example.ui.viewmodel.MainViewModel
 @Composable
 fun TradeScreen(viewModel: MainViewModel) {
     var selectedLeverage by remember { mutableStateOf("1x") }
-    var selectedAllocation by remember { mutableStateOf("25%") }
+    var selectedAllocation by remember { mutableStateOf(25) }
     val isRunning by viewModel.isEngineRunning.collectAsState()
     val isApiConnected by viewModel.isApiConnected.collectAsState()
     val currentPair by viewModel.selectedPair.collectAsState()
 
     val leverages = listOf("1x", "2x", "5x", "10x", "20x", "50x")
-    val allocations = listOf("10%", "25%", "50%", "75%", "100%")
+    val allocations = listOf(10, 25, 50, 75, 100)
 
     Column(
         modifier = Modifier
@@ -35,7 +35,6 @@ fun TradeScreen(viewModel: MainViewModel) {
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // هدر جفت ارز و وضعیت
         Card(
             colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
             shape = RoundedCornerShape(12.dp)
@@ -65,7 +64,6 @@ fun TradeScreen(viewModel: MainViewModel) {
             }
         }
 
-        // بخش ضرایب اهرم معاملاتی (Leverage Multipliers)
         Card(
             colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
             shape = RoundedCornerShape(12.dp)
@@ -101,7 +99,6 @@ fun TradeScreen(viewModel: MainViewModel) {
             }
         }
 
-        // بخش درصد تخصیص سرمایه (Capital Allocation)
         Card(
             colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
             shape = RoundedCornerShape(12.dp)
@@ -126,7 +123,7 @@ fun TradeScreen(viewModel: MainViewModel) {
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = alloc,
+                                text = "$alloc%",
                                 color = Color.White,
                                 fontSize = 12.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
@@ -137,13 +134,12 @@ fun TradeScreen(viewModel: MainViewModel) {
             }
         }
 
-        // دکمه‌های اجرای معامله سریع خرید و فروش
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Button(
-                onClick = { viewModel.executeOrder(symbol = currentPair, side = "BUY") },
+                onClick = { viewModel.executeOrder("BUY", selectedAllocation.toDouble()) },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853)),
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier.weight(1f).height(50.dp)
@@ -152,7 +148,7 @@ fun TradeScreen(viewModel: MainViewModel) {
             }
 
             Button(
-                onClick = { viewModel.executeOrder(symbol = currentPair, side = "SELL") },
+                onClick = { viewModel.executeOrder("SELL", selectedAllocation.toDouble()) },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD50000)),
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier.weight(1f).height(50.dp)
@@ -161,9 +157,8 @@ fun TradeScreen(viewModel: MainViewModel) {
             }
         }
 
-        // سوئیچ استارت موتور ترید خودکار
         Button(
-            onClick = { viewModel.toggleAutoEngine(!isRunning) },
+            onClick = { viewModel.toggleAutoEngine() },
             colors = ButtonDefaults.buttonColors(
                 containerColor = if (isRunning) Color(0xFFC62828) else Color(0xFF0277BD)
             ),
