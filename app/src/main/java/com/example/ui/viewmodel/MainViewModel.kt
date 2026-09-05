@@ -295,7 +295,7 @@ class MainViewModel : ViewModel() {
             var liveOrderId = "LOCAL_EXEC"
             val currentApiKey = _wallexApiKey.value
             if (currentApiKey.isNotBlank()) {
-                val orderResult = WallexLiveClient.placeOrder(
+                val orderResult = WallexLiveClient.placeOrderWithRetry(
                     apiKey = currentApiKey,
                     symbol = _selectedPair.value,
                     type = side,
