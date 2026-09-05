@@ -22,7 +22,6 @@ fun TradeScreen(viewModel: MainViewModel) {
     var selectedAllocation by remember { mutableStateOf(25) }
     var showApiDialog by remember { mutableStateOf(false) }
     var apiKeyInput by remember { mutableStateOf("") }
-    var apiSecretInput by remember { mutableStateOf("") }
     var apiMessage by remember { mutableStateOf("") }
 
     val isRunning by viewModel.isEngineRunning.collectAsState()
@@ -35,9 +34,21 @@ fun TradeScreen(viewModel: MainViewModel) {
     if (showApiDialog) {
         AlertDialog(
             onDismissRequest = { showApiDialog = false },
-            title = { Text("اتصال کلید صرافی (API Keys)", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold) },
+            title = {
+                Text(
+                    text = "اتصال کلید صرافی (API Key)",
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "کلید API دریافتی از صرافی را وارد کنید:",
+                        color = Color.Gray,
+                        fontSize = 12.sp
+                    )
                     OutlinedTextField(
                         value = apiKeyInput,
                         onValueChange = { apiKeyInput = it },
@@ -45,18 +56,10 @@ fun TradeScreen(viewModel: MainViewModel) {
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Color(0xFF00E5FF),
-                            focusedLabelColor = Color(0xFF00E5FF)
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = apiSecretInput,
-                        onValueChange = { apiSecretInput = it },
-                        label = { Text("API Secret") },
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFF00E5FF),
-                            focusedLabelColor = Color(0xFF00E5FF)
+                            focusedLabelColor = Color(0xFF00E5FF),
+                            unfocusedBorderColor = Color(0xFF30363D),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -95,7 +98,6 @@ fun TradeScreen(viewModel: MainViewModel) {
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // نوار جفت‌ارز، وضعیت اتصال و دکمه اختصاصی تنظیم API
         Card(
             colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
             shape = RoundedCornerShape(12.dp)
@@ -111,31 +113,25 @@ fun TradeScreen(viewModel: MainViewModel) {
                     Text("جفت‌ارز معاملاتی", color = Color.Gray, fontSize = 11.sp)
                     Text(currentPair, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
-                
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+
+                Button(
+                    onClick = { showApiDialog = true },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isApiConnected) Color(0xFF1B5E20) else Color(0xFFE65100)
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                 ) {
-                    Button(
-                        onClick = { showApiDialog = true },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isApiConnected) Color(0xFF1B5E20) else Color(0xFFE65100)
-                        ),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            text = if (isApiConnected) "API متصل است" else "تنظیم و اتصال API",
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    Text(
+                        text = if (isApiConnected) "API متصل است" else "تنظیم و اتصال API",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
 
-        // دکمه استارت/توقف اجرای خودکار ربات معامله‌گر
         Button(
             onClick = { viewModel.toggleAutoEngine() },
             colors = ButtonDefaults.buttonColors(
@@ -152,7 +148,6 @@ fun TradeScreen(viewModel: MainViewModel) {
             )
         }
 
-        // انتخاب اهرم (Leverage Multipliers)
         Card(
             colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
             shape = RoundedCornerShape(12.dp)
@@ -188,7 +183,6 @@ fun TradeScreen(viewModel: MainViewModel) {
             }
         }
 
-        // انتخاب درصد حجم سرمایه
         Card(
             colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
             shape = RoundedCornerShape(12.dp)
@@ -224,7 +218,6 @@ fun TradeScreen(viewModel: MainViewModel) {
             }
         }
 
-        // سفارش دستی فوری خرید / فروش
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
