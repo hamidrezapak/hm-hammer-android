@@ -403,12 +403,11 @@ class MainViewModel : ViewModel() {
         sb.append("------------------------------------\n")
         _auditLogs.value.forEach { sb.append("[${it.timestamp}] [${it.eventType}] ${it.message}\n") }
         return sb.toString()
-    }
 
     fun startRealEngine(context: android.content.Context, symbol: String = "BTCUSDT") {
         val key = _wallexApiKey.value
         if (key.isBlank()) {
-            _lastEngineLog.value = "ابتدا کلید API را متصل نمایید"
+            _lastEngineLog.value = "API Key is required"
             return
         }
         val intent = android.content.Intent(context, com.example.service.TradingService::class.java).apply {
@@ -421,13 +420,13 @@ class MainViewModel : ViewModel() {
             context.startService(intent)
         }
         _isEngineRunning.value = true
-        _lastEngineLog.value = "موتور واقعی ترید فعال شد ($symbol)"
+        _lastEngineLog.value = "Trading engine started for " + symbol
     }
 
     fun stopRealEngine(context: android.content.Context) {
         val intent = android.content.Intent(context, com.example.service.TradingService::class.java)
         context.stopService(intent)
         _isEngineRunning.value = false
-        _lastEngineLog.value = "موتور معامله‌گر متوقف شد"
+        _lastEngineLog.value = "Trading engine stopped"
     }
 }
