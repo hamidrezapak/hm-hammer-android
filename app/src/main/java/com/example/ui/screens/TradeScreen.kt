@@ -139,7 +139,7 @@ fun TradeScreen(viewModel: MainViewModel) {
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Button(
-                onClick = { viewModel.executeOrder("BUY", selectedAllocation.toDouble()) },
+                onClick = { viewModel.executeOrder("BUY", true) },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853)),
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier.weight(1f).height(50.dp)
@@ -148,7 +148,7 @@ fun TradeScreen(viewModel: MainViewModel) {
             }
 
             Button(
-                onClick = { viewModel.executeOrder("SELL", selectedAllocation.toDouble()) },
+                onClick = { viewModel.executeOrder("SELL", true) },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD50000)),
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier.weight(1f).height(50.dp)
