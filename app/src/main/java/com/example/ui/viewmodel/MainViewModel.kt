@@ -121,12 +121,6 @@ class MainViewModel : ViewModel() {
     var telegramAdminChatId: String = ""
 
     init {
-        val prefs = getApplication<android.app.Application>().getSharedPreferences("hammer_prefs", android.content.Context.MODE_PRIVATE)
-        val savedKey = prefs.getString("wallex_api_key", "") ?: ""
-        if (savedKey.isNotBlank()) {
-            _wallexApiKey.value = savedKey
-            _isApiConnected.value = true
-        }
         addAuditLog("SYSTEM", "هسته معاملاتی HM HAMMER بارگذاری شد. موجودی واقعی منتظر تایید API صرافی.", true)
         recalculateLevels(64500.0, "BUY")
     }
@@ -175,8 +169,6 @@ class MainViewModel : ViewModel() {
     fun verifyAndSaveWallexKey(apiKey: String, onResult: (Boolean, String) -> Unit) {
         val cleanKey = apiKey.trim()
         _wallexApiKey.value = cleanKey
-        getApplication<android.app.Application>().getSharedPreferences("hammer_prefs", android.content.Context.MODE_PRIVATE)
-            .edit().putString("wallex_api_key", cleanKey).apply()
         viewModelScope.launch {
             if (cleanKey.length < 8) {
                 _isApiConnected.value = false
@@ -402,29 +394,4 @@ class MainViewModel : ViewModel() {
         _auditLogs.value.forEach { sb.append("[${it.timestamp}] [${it.eventType}] ${it.message}\n") }
         return sb.toString()
     }
-}
-    fun connectApiKey(apiKey: String, onResult: (Boolean, String) -> Unit) {
-        val cleanKey = apiKey.trim()
-        if (cleanKey.isBlank()) {
-            onResult(false, "کلید API نمی‌تواند خالی باشد")
-            return
-        }
-        viewModelScope.launch {
-            val res = WallexLiveClient.fetchBalance(cleanKey)
-            res.onSuccess { balance ->
-                _wallexApiKey.value = cleanKey
-                _isApiConnected.value = true
-                _usdtBalance.value = balance
-                try {
-                    val prefs = getApplication<android.app.Application>().getSharedPreferences("hammer_prefs", android.content.Context.MODE_PRIVATE)
-                    prefs.edit().putString("wallex_api_key", cleanKey).apply()
-                } catch (e: Exception) {}
-                onResult(true, "اتصال زنده برقرار شد. موجودی: $balance USDT")
-            }.onFailure { err ->
-                _isApiConnected.value = false
-                onResult(false, err.message ?: "خطا در اتصال به صرافی")
-            }
-        }
-    }
-
 }

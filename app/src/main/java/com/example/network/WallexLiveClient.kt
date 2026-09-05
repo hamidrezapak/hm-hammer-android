@@ -86,31 +86,3 @@ object WallexLiveClient {
         Result.failure(lastException ?: Exception("عدم اتصال به صرافی پس از ۳ تلاش مجدد."))
     }
 }
-    suspend fun fetchBalance(apiKey: String): Result<Double> = withContext(Dispatchers.IO) {
-        try {
-            val url = URL("$BASE_URL/account/balances")
-            val conn = url.openConnection() as HttpURLConnection
-            conn.requestMethod = "GET"
-            conn.setRequestProperty("X-API-Key", apiKey)
-            conn.connectTimeout = 8000
-            conn.readTimeout = 8000
-
-            val responseCode = conn.responseCode
-            val stream = if (responseCode in 200..299) conn.inputStream else conn.errorStream
-            val responseText = stream.bufferedReader().readText()
-
-            if (responseCode in 200..299) {
-                val json = JSONObject(responseText)
-                val resultObj = json.optJSONObject("result")
-                val balances = resultObj?.optJSONObject("balances")
-                val usdtBalance = balances?.optJSONObject("USDT")?.optDouble("value", 0.0) ?: 0.0
-                Result.success(usdtBalance)
-            } else {
-                Result.failure(Exception("پاسخ صرافی ($responseCode): $responseText"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-}
