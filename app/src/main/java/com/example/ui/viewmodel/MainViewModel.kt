@@ -405,3 +405,30 @@ class MainViewModel : ViewModel() {
         return sb.toString()
     }
 }
+    fun startRealEngine(context: android.content.Context, symbol: String = "BTCUSDT") {
+        val key = _wallexApiKey.value
+        if (key.isBlank()) {
+            _lastEngineLog.value = "ابتدا کلید API را متصل نمایید"
+            return
+        }
+        val intent = android.content.Intent(context, com.example.service.TradingService::class.java).apply {
+            putExtra("API_KEY", key)
+            putExtra("SYMBOL", symbol)
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            context.startForegroundService(intent)
+        } else {
+            context.startService(intent)
+        }
+        _isEngineRunning.value = true
+        _lastEngineLog.value = "موتور واقعی ترید فعال شد ($symbol)"
+    }
+
+    fun stopRealEngine(context: android.content.Context) {
+        val intent = android.content.Intent(context, com.example.service.TradingService::class.java)
+        context.stopService(intent)
+        _isEngineRunning.value = false
+        _lastEngineLog.value = "موتور معامله‌گر متوقف شد"
+    }
+
+}
