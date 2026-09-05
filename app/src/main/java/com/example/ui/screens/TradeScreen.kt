@@ -68,7 +68,7 @@ fun TradeScreen(viewModel: MainViewModel) {
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.verifyAndSaveWallexKey(apiKeyInput, apiSecretInput) { success, msg ->
+                        viewModel.verifyAndSaveWallexKey(apiKeyInput) { success, msg ->
                             apiMessage = msg
                             if (success) showApiDialog = false
                         }
