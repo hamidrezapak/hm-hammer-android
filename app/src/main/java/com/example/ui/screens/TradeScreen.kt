@@ -73,7 +73,7 @@ viewModel: MainViewModel) {
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.verifyAndSaveWallexKey(apiKeyInput) { success, msg ->
+                        viewModel.verifyAndSaveWallexKey(apiKeyInput, context) { success, msg ->
                             apiMessage = msg
                             if (success) showApiDialog = false
                         }
