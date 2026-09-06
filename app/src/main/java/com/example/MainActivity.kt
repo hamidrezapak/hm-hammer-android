@@ -1,8 +1,3 @@
-
-import android.os.Build
-import androidx.core.app.ActivityCompat
-import android.content.pm.PackageManager
-import android.Manifest
 package com.example
 
 import android.os.Build
@@ -11,10 +6,9 @@ import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
-import android.os.Build
-import androidx.core.app.ActivityCompat
-import android.content.pm.PackageManager
-import android.Manifest
+
+
+
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
