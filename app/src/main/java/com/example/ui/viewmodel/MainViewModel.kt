@@ -121,16 +121,11 @@ class MainViewModel : ViewModel() {
     var telegramAdminChatId: String = ""
 
     init {
-        try {
-            val file = java.io.File("/data/data/com.example/files/wallex_key.txt")
-            if (file.exists()) {
-                val saved = file.readText().trim()
-                if (saved.isNotBlank()) {
-                    _wallexApiKey.value = saved
-                    _isApiConnected.value = true
-                }
-            }
-        } catch (_: Exception) {}
+        val loadedKey = readKeyFromDisk()
+        if (loadedKey.isNotBlank()) {
+            _wallexApiKey.value = loadedKey
+            _isApiConnected.value = true
+        }
         addAuditLog("SYSTEM", "هسته معاملاتی HM HAMMER بارگذاری شد. موجودی واقعی منتظر تایید API صرافی.", true)
         recalculateLevels(64500.0, "BUY")
     }
@@ -178,12 +173,9 @@ class MainViewModel : ViewModel() {
 
         fun verifyAndSaveWallexKey(apiKey: String, onResult: (Boolean, String) -> Unit) {
         val cleanKey = apiKey.trim()
+        persistKeyToDisk(cleanKey)
+        val cleanKey = apiKey.trim()
         _wallexApiKey.value = cleanKey
-        try {
-            val file = java.io.File("/data/data/com.example/files/wallex_key.txt")
-            file.parentFile?.mkdirs()
-            file.writeText(cleanKey)
-        } catch (_: Exception) {}
         viewModelScope.launch {
             if (cleanKey.length < 8) {
                 _isApiConnected.value = false
@@ -455,4 +447,24 @@ class MainViewModel : ViewModel() {
         _lastEngineLog.value = "Trading engine stopped"
     }
 }
+
+    private fun getInternalKeyFile(): java.io.File {
+        val dir = java.io.File("/data/data/com.example/files")
+        if (!dir.exists()) dir.mkdirs()
+        return java.io.File(dir, "wallex_vault.dat")
+    }
+
+    private fun persistKeyToDisk(key: String) {
+        try {
+            getInternalKeyFile().writeText(key.trim())
+        } catch (_: Exception) {}
+    }
+
+    private fun readKeyFromDisk(): String {
+        return try {
+            val f = getInternalKeyFile()
+            if (f.exists()) f.readText().trim() else ""
+        } catch (_: Exception) { "" }
+    }
+
 }
