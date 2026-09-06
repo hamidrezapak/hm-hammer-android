@@ -444,8 +444,6 @@ class MainViewModel : ViewModel() {
 }
 
 fun restoreSavedKey(context: Context) {
-    val sp = context.getSharedPreferences("hammer_prefs", Context.MODE_PRIVATE)
-    val saved = sp.getString("saved_api_key", "") ?: ""
     if (saved.isNotBlank()) {
         _wallexApiKey.value = saved
         _isApiConnected.value = true
