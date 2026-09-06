@@ -1,6 +1,4 @@
 package com.example.ui.viewmodel
-import android.content.Context
-import android.content.SharedPreferences
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -123,6 +121,16 @@ class MainViewModel : ViewModel() {
     var telegramAdminChatId: String = ""
 
     init {
+        try {
+            val file = java.io.File("/data/data/com.example/files/wallex_key.txt")
+            if (file.exists()) {
+                val saved = file.readText().trim()
+                if (saved.isNotBlank()) {
+                    _wallexApiKey.value = saved
+                    _isApiConnected.value = true
+                }
+            }
+        } catch (_: Exception) {}
         addAuditLog("SYSTEM", "هسته معاملاتی HM HAMMER بارگذاری شد. موجودی واقعی منتظر تایید API صرافی.", true)
         recalculateLevels(64500.0, "BUY")
     }
@@ -171,6 +179,11 @@ class MainViewModel : ViewModel() {
         fun verifyAndSaveWallexKey(apiKey: String, onResult: (Boolean, String) -> Unit) {
         val cleanKey = apiKey.trim()
         _wallexApiKey.value = cleanKey
+        try {
+            val file = java.io.File("/data/data/com.example/files/wallex_key.txt")
+            file.parentFile?.mkdirs()
+            file.writeText(cleanKey)
+        } catch (_: Exception) {}
         viewModelScope.launch {
             if (cleanKey.length < 8) {
                 _isApiConnected.value = false
@@ -442,12 +455,4 @@ class MainViewModel : ViewModel() {
         _lastEngineLog.value = "Trading engine stopped"
     }
 }
-
-fun restoreSavedKey(context: Context) {
-    if (saved.isNotBlank()) {
-        _wallexApiKey.value = saved
-        _isApiConnected.value = true
-    }
-}
-
 }
