@@ -430,3 +430,4 @@ class MainViewModel : ViewModel() {
         _lastEngineLog.value = "Trading engine stopped"
     }
 }
+}
