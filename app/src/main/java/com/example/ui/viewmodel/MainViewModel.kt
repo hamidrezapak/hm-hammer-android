@@ -174,7 +174,6 @@ class MainViewModel : ViewModel() {
         fun verifyAndSaveWallexKey(apiKey: String, onResult: (Boolean, String) -> Unit) {
         val cleanKey = apiKey.trim()
         persistKeyToDisk(cleanKey)
-        val cleanKey = apiKey.trim()
         _wallexApiKey.value = cleanKey
         viewModelScope.launch {
             if (cleanKey.length < 8) {
