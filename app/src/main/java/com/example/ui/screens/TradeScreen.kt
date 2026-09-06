@@ -73,9 +73,7 @@ viewModel: MainViewModel) {
             confirmButton = {
                 Button(
                     onClick = {
-                        val sp = context.getSharedPreferences("hammer_prefs", android.content.Context.MODE_PRIVATE)
-                sp.edit().putString("wallex_key", apiKeyInput.trim()).apply()
-                viewModel.verifyAndSaveWallexKey(apiKeyInput) { success, msg ->
+                        viewModel.verifyAndSaveWallexKey(apiKeyInput, context) { success, msg ->
                             apiMessage = msg
                             if (success) showApiDialog = false
                         }

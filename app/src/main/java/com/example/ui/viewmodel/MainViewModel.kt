@@ -123,15 +123,6 @@ class MainViewModel : ViewModel() {
     var telegramAdminChatId: String = ""
 
     init {
-        try {
-            val ctx = com.example.MyApplication.appContext ?: android.app.ActivityThread.currentApplication()
-            val sp = ctx.getSharedPreferences("hammer_prefs", android.content.Context.MODE_PRIVATE)
-            val savedKey = sp.getString("saved_api_key", "") ?: ""
-            if (savedKey.isNotBlank()) {
-                _wallexApiKey.value = savedKey
-                _isApiConnected.value = true
-            }
-        } catch (_: Exception) {}
         addAuditLog("SYSTEM", "هسته معاملاتی HM HAMMER بارگذاری شد. موجودی واقعی منتظر تایید API صرافی.", true)
         recalculateLevels(64500.0, "BUY")
     }
@@ -180,11 +171,6 @@ class MainViewModel : ViewModel() {
         fun verifyAndSaveWallexKey(apiKey: String, onResult: (Boolean, String) -> Unit) {
         val cleanKey = apiKey.trim()
         _wallexApiKey.value = cleanKey
-        try {
-            val ctx = com.example.MyApplication.appContext ?: android.app.ActivityThread.currentApplication()
-            val sp = ctx.getSharedPreferences("hammer_prefs", android.content.Context.MODE_PRIVATE)
-            sp.edit().putString("saved_api_key", cleanKey).apply()
-        } catch (_: Exception) {}
         viewModelScope.launch {
             if (cleanKey.length < 8) {
                 _isApiConnected.value = false
