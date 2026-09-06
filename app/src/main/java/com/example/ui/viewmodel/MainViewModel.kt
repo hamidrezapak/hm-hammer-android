@@ -230,25 +230,35 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    fun toggleAutoEngine() {
-        if (_usdtBalance.value <= 0.0) {
-            val msg = "موجودی کیف‌پول ۰ است. ابتدا حساب صرافی را شارژ کنید."
-            _lastEngineLog.value = msg
-            addAuditLog("ENGINE_BLOCKED", msg, false)
-            return
-        }
-        _isEngineRunning.value = !_isEngineRunning.value
+    fun toggleAutoEngine(context: android.content.Context? = null) {
         if (_isEngineRunning.value) {
-            val startMsg = "موتور اتوماتیک چکش فعال شد. اسکن بازار آغاز گردید."
-            _lastEngineLog.value = startMsg
-            addAuditLog("ENGINE_START", startMsg, true)
-            sendTelegramAlert("🚀 موتور ترید خودکار فعال شد.")
-            startMarketScanner()
+            // توقف سرویس زنده
+            context?.let { ctx ->
+                val intent = android.content.Intent(ctx, com.example.service.TradingService::class.java)
+                ctx.stopService(intent)
+            }
+            _isEngineRunning.value = false
+            _lastEngineLog.value = "موتور معامله‌گر متوقف شد"
         } else {
-            val stopMsg = "موتور ترید خودکار متوقف شد."
-            _lastEngineLog.value = stopMsg
-            addAuditLog("ENGINE_STOP", stopMsg, false)
-            sendTelegramAlert("🛑 موتور ترید متوقف شد.")
+            val key = _wallexApiKey.value
+            if (key.isBlank()) {
+                _lastEngineLog.value = "ابتدا کلید API را وارد نمایید"
+                return
+            }
+            // شروع سرویس زنده واقعی در پس‌زمینه
+            context?.let { ctx ->
+                val intent = android.content.Intent(ctx, com.example.service.TradingService::class.java).apply {
+                    putExtra("API_KEY", key)
+                    putExtra("SYMBOL", "BTCUSDT")
+                }
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    ctx.startForegroundService(intent)
+                } else {
+                    ctx.startService(intent)
+                }
+            }
+            _isEngineRunning.value = true
+            _lastEngineLog.value = "موتور واقعی ترید فعال شد (BTCUSDT)"
         }
     }
 

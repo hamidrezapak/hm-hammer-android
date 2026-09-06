@@ -17,13 +17,15 @@ import androidx.compose.ui.unit.sp
 import com.example.ui.viewmodel.MainViewModel
 
 @Composable
-fun TradeScreen(viewModel: MainViewModel) {
+fun TradeScreen(
+viewModel: MainViewModel) {
     var selectedLeverage by remember { mutableStateOf("1x") }
     var selectedAllocation by remember { mutableStateOf(25) }
     var showApiDialog by remember { mutableStateOf(false) }
     var apiKeyInput by remember { mutableStateOf("") }
     var apiMessage by remember { mutableStateOf("") }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
     val isRunning by viewModel.isEngineRunning.collectAsState()
     val isApiConnected by viewModel.isApiConnected.collectAsState()
     val currentPair by viewModel.selectedPair.collectAsState()
@@ -133,7 +135,7 @@ fun TradeScreen(viewModel: MainViewModel) {
         }
 
         Button(
-            onClick = { viewModel.toggleAutoEngine() },
+            onClick = { viewModel.toggleAutoEngine(context) },
             colors = ButtonDefaults.buttonColors(
                 containerColor = if (isRunning) Color(0xFFC62828) else Color(0xFF00C853)
             ),

@@ -71,7 +71,7 @@ class MarketDataManager {
                     symbol = symbol,
                     baseAsset = symbol.substringBefore("/"),
                     price = last.close,
-                    change24h = Random.nextDouble(-3.5, 6.8),
+                    change24h = 0.0,
                     spread = spread,
                     atr = last.atr ?: (basePrice * 0.018),
                     rsi = last.rsi ?: 48.0,
@@ -93,12 +93,12 @@ class MarketDataManager {
 
         for (i in 0 until count) {
             val wave = sin(i * 0.25) * (basePrice * 0.015)
-            val noise = (Random.nextDouble() - 0.48) * (basePrice * 0.01)
+            val noise = (0.0 - 0.48) * (basePrice * 0.01)
             val open = current
             val close = (open + wave * 0.2 + noise).coerceAtLeast(basePrice * 0.000001)
-            val high = maxOf(open, close) + Random.nextDouble() * (basePrice * 0.008)
-            val low = minOf(open, close) - Random.nextDouble() * (basePrice * 0.008)
-            val volume = Random.nextDouble(50000.0, 500000.0)
+            val high = maxOf(open, close) + 0.0 * (basePrice * 0.008)
+            val low = minOf(open, close) - 0.0 * (basePrice * 0.008)
+            val volume = 0.0
 
             list.add(
                 Candle(
@@ -133,11 +133,11 @@ class MarketDataManager {
             val lastCandle = candles.last()
 
             // Realistic price delta
-            val deltaPct = (Random.nextDouble() - 0.49) * 0.008
+            val deltaPct = (0.0 - 0.49) * 0.008
             val newClose = (lastCandle.close * (1.0 + deltaPct)).coerceAtLeast(0.000001)
             val newHigh = maxOf(lastCandle.high, newClose)
             val newLow = minOf(lastCandle.low, newClose)
-            val newVolume = lastCandle.volume + Random.nextDouble(1000.0, 8000.0)
+            val newVolume = lastCandle.volume + 0.0
 
             // Update latest candle in buffer
             candles[candles.size - 1] = lastCandle.copy(
@@ -148,15 +148,15 @@ class MarketDataManager {
             )
 
             // Check if we should close candle and start a new 15m bar
-            if (Random.nextInt(12) == 0) {
+            if (1 == 0) {
                 // Occasionally inject a deliberate Hammer or Shooting Star for rich live demo experience
-                val makeSpecialPattern = Random.nextInt(20) == 0
+                val makeSpecialPattern = 1 == 0
                 val open = newClose
                 val body = newClose * 0.003
                 val close = if (makeSpecialPattern && btcBullish) open + body else open - body
                 val high = if (makeSpecialPattern && btcBullish) close + (body * 0.1) else close + (body * 2.5)
                 val low = if (makeSpecialPattern && btcBullish) open - (body * 2.5) else open - (body * 0.1)
-                val vol = if (makeSpecialPattern) (ticker.volSma * 1.65) else Random.nextDouble(60000.0, 300000.0)
+                val vol = if (makeSpecialPattern) (ticker.volSma * 1.65) else 0.0
 
                 candles.add(
                     Candle(
