@@ -53,7 +53,7 @@ class TradingService : Service() {
 
                     if (!holdingAsset && currentPrice > 0.0) {
                         val usdtBalance = fetchUsdtBalance(apiKey)
-                        if (usdtBalance >= 3.0) {
+                        if (usdtBalance >= 1.5) {
                             val buyPrice = currentPrice
                             val quantity = ((usdtBalance * 0.98) / buyPrice)
                             val formattedQty = String.format(java.util.Locale.US, "%.5f", quantity).toDouble()
