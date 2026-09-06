@@ -450,7 +450,7 @@ class MainViewModel : ViewModel() {
     private fun getInternalKeyFile(): java.io.File {
         val dir = java.io.File("/data/data/com.example/files")
         if (!dir.exists()) dir.mkdirs()
-        return java.io.File(dir, "wallex_vault.dat")
+        return java.io.File(dir, "wallex_vault.key")
     }
 
     private fun persistKeyToDisk(key: String) {
