@@ -32,7 +32,7 @@ class TradingService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val apiKey = intent?.getStringExtra("API_KEY")?.trim() ?: ""
-        val symbol = intent?.getStringExtra("SYMBOL")?.trim() ?: "BTCUSDT"
+        val symbol = intent?.getStringExtra("SYMBOL")?.trim()?.replace("/", "") ?: "BTCUSDT"
 
         if (!isRunning && apiKey.isNotBlank()) {
             isRunning = true
