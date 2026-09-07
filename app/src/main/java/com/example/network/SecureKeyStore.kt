@@ -4,25 +4,35 @@ import java.io.File
 
 object SecureKeyStore {
     private var memoryKey: String = ""
-    private var storageDir: File? = null
-
-    fun init(dir: File) {
-        storageDir = dir
-        val file = File(dir, "wallex_vault.key")
-        if (file.exists()) {
-            memoryKey = file.readText().trim()
+    private val keyFile: File
+        get() {
+            val dir = File("/data/data/com.example/files")
+            if (!dir.exists()) dir.mkdirs()
+            return File(dir, "wallex_vault.key")
         }
+
+    fun init(dir: File? = null) {
+        getKey()
     }
 
     fun saveKey(key: String) {
-        memoryKey = key.trim()
-        storageDir?.let {
-            val file = File(it, "wallex_vault.key")
-            file.writeText(memoryKey)
-        }
+        val clean = key.trim()
+        memoryKey = clean
+        try {
+            keyFile.writeText(clean)
+        } catch (_: Exception) {}
     }
 
-    fun getKey(): String = memoryKey
+    fun getKey(): String {
+        if (memoryKey.isBlank()) {
+            try {
+                if (keyFile.exists()) {
+                    memoryKey = keyFile.readText().trim()
+                }
+            } catch (_: Exception) {}
+        }
+        return memoryKey
+    }
 
-    fun hasKey(): Boolean = memoryKey.isNotBlank()
+    fun hasKey(): Boolean = getKey().isNotBlank()
 }

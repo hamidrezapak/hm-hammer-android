@@ -41,7 +41,7 @@ object WallexLiveClient {
         val slippage = if (type.equals("buy", ignoreCase = true)) 1.0015 else 0.9985
         val aggressivePrice = formatPrice(symbol, price * slippage)
 
-        if (cleanQty * aggressivePrice < 2.0) {
+        if (cleanQty * aggressivePrice < 1.0) {
             return@withContext Result.failure(Exception("ارزش کل سفارش کمتر از حداقل مجاز صرافی (2 USDT) است."))
         }
 

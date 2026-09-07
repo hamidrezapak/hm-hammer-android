@@ -121,7 +121,7 @@ class MainViewModel : ViewModel() {
     var telegramAdminChatId: String = ""
 
     init {
-        val loadedKey = readKeyFromDisk()
+        val loadedKey = com.example.network.SecureKeyStore.getKey()
         if (loadedKey.isNotBlank()) {
             _wallexApiKey.value = loadedKey
             _isApiConnected.value = true

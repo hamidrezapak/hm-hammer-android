@@ -26,7 +26,7 @@ fun WalletScreen(
     currentLanguage: LanguageOption = LanguageOption.FA
 ) {
     val context = LocalContext.current
-    var apiKeyInput by remember { mutableStateOf("") }
+    var apiKeyInput by remember { mutableStateOf(com.example.network.SecureKeyStore.getKey()) }
     var isApiConnected by remember { mutableStateOf(false) }
 
     LazyColumn(
@@ -132,6 +132,7 @@ fun WalletScreen(
                     Button(
                         onClick = {
                             if (apiKeyInput.isNotBlank()) {
+                com.example.network.SecureKeyStore.saveKey(apiKeyInput)
                                 isApiConnected = true
                                 Toast.makeText(context, "کلید API با موفقیت در دستگاه رمزنگاری شد", Toast.LENGTH_SHORT).show()
                             } else {
