@@ -160,4 +160,18 @@ object WallexLiveClient {
             conn?.disconnect()
         }
     }
+
+    suspend fun placeOrder(
+        apiKey: String,
+        symbol: String,
+        type: String,
+        quantity: Double,
+        price: Double
+    ): Result<String> = executeOrder(
+        apiKey = apiKey,
+        symbol = symbol,
+        side = type,
+        quantity = quantity,
+        price = price
+    )
 }
