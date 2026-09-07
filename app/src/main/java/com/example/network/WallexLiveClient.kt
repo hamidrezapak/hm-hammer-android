@@ -174,4 +174,53 @@ object WallexLiveClient {
         quantity = quantity,
         price = price
     )
+
+    suspend fun checkOrderStatus(apiKey: String, orderId: String): Result<String> = withContext(Dispatchers.IO) {
+        var conn: java.net.HttpURLConnection? = null
+        try {
+            val url = java.net.URL("$BASE_URL/orders/$orderId")
+            conn = (url.openConnection() as java.net.HttpURLConnection).apply {
+                requestMethod = "GET"
+                setRequestProperty("X-API-Key", apiKey.trim())
+                setRequestProperty("Content-Type", "application/json")
+                connectTimeout = 7000
+                readTimeout = 7000
+            }
+            val code = conn.responseCode
+            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+            val res = stream?.bufferedReader()?.readText().orEmpty()
+
+            if (code in 200..299) {
+                val json = org.json.JSONObject(res)
+                val status = json.optJSONObject("result")?.optString("status", "UNKNOWN") ?: "UNKNOWN"
+                Result.success(status.uppercase(java.util.Locale.ROOT))
+            } else {
+                Result.failure(WallexException.NetworkException("HTTP $code: $res"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        } finally {
+            conn?.disconnect()
+        }
+    }
+
+    suspend fun cancelOrder(apiKey: String, orderId: String): Result<Boolean> = withContext(Dispatchers.IO) {
+        var conn: java.net.HttpURLConnection? = null
+        try {
+            val url = java.net.URL("$BASE_URL/orders/$orderId")
+            conn = (url.openConnection() as java.net.HttpURLConnection).apply {
+                requestMethod = "DELETE"
+                setRequestProperty("X-API-Key", apiKey.trim())
+                setRequestProperty("Content-Type", "application/json")
+                connectTimeout = 7000
+                readTimeout = 7000
+            }
+            val code = conn.responseCode
+            Result.success(code in 200..299)
+        } catch (e: Exception) {
+            Result.failure(e)
+        } finally {
+            conn?.disconnect()
+        }
+    }
 }

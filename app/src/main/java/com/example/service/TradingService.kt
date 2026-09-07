@@ -12,6 +12,8 @@ import androidx.core.app.NotificationCompat
 import com.example.network.WallexException
 import com.example.network.WallexLiveClient
 import kotlinx.coroutines.*
+import org.json.JSONObject
+import java.io.File
 import java.util.Locale
 
 class TradingService : Service() {
@@ -24,7 +26,7 @@ class TradingService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        startForeground(NOTIFICATION_ID, buildNotification("سرویس معاملات فعال است"))
+        startForeground(NOTIFICATION_ID, buildNotification("سرویس معاملات پایدار آماده است"))
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -38,6 +40,36 @@ class TradingService : Service() {
         return START_STICKY
     }
 
+    private fun getPositionFile(): File {
+        val dir = File("/data/data/com.example/files")
+        if (!dir.exists()) dir.mkdirs()
+        return File(dir, "active_position.json")
+    }
+
+    private fun savePositionState(holding: Boolean, price: Double) {
+        try {
+            val json = JSONObject().apply {
+                put("holding", holding)
+                put("price", price)
+            }
+            getPositionFile().writeText(json.toString())
+        } catch (_: Exception) {}
+    }
+
+    private fun loadPositionState(): Pair<Boolean, Double> {
+        return try {
+            val file = getPositionFile()
+            if (file.exists()) {
+                val json = JSONObject(file.readText())
+                Pair(json.optBoolean("holding", false), json.optDouble("price", 0.0))
+            } else {
+                Pair(false, 0.0)
+            }
+        } catch (_: Exception) {
+            Pair(false, 0.0)
+        }
+    }
+
     private fun extractBaseAsset(symbol: String): String {
         return symbol.uppercase(Locale.ROOT)
             .removeSuffix("USDT")
@@ -47,8 +79,9 @@ class TradingService : Service() {
 
     private fun startTradingLoop(apiKey: String, symbol: String) {
         serviceScope.launch {
-            var currentPositionPrice = 0.0
-            var holdingAsset = false
+            val (savedHolding, savedPrice) = loadPositionState()
+            var holdingAsset = savedHolding
+            var currentPositionPrice = savedPrice
             var failureCount = 0
             val baseAsset = extractBaseAsset(symbol)
 
@@ -60,6 +93,7 @@ class TradingService : Service() {
                     }
                     val currentPrice = priceResult.getOrThrow()
 
+                    // سناریوی خرید
                     if (!holdingAsset && currentPrice > 0.0) {
                         val usdtResult = WallexLiveClient.fetchBalance(apiKey, "USDT")
                         usdtResult.onSuccess { usdtBalance ->
@@ -70,21 +104,32 @@ class TradingService : Service() {
                                 val cleanQty = WallexLiveClient.formatQuantity(symbol, rawQty)
 
                                 if (cleanQty > 0.0) {
-                                    updateNotification("در حال خرید در $buyPrice...")
+                                    updateNotification("ثبت سفارش خرید در $buyPrice...")
                                     val orderResult = WallexLiveClient.executeOrder(apiKey, symbol, "BUY", cleanQty, buyPrice)
+                                    
                                     orderResult.onSuccess { orderId ->
-                                        currentPositionPrice = buyPrice
-                                        holdingAsset = true
-                                        updateNotification("خرید ثبت شد (سفارش: $orderId)")
+                                        updateNotification("سفارش $orderId ثبت شد. بررسی وضعیت اجرا...")
+                                        val isFilled = waitForOrderFill(apiKey, orderId, maxWaitSeconds = 25)
+                                        if (isFilled) {
+                                            holdingAsset = true
+                                            currentPositionPrice = buyPrice
+                                            savePositionState(true, buyPrice)
+                                            updateNotification("خرید کامل شد در قیمت $buyPrice")
+                                        } else {
+                                            WallexLiveClient.cancelOrder(apiKey, orderId)
+                                            updateNotification("سفارش خرید به دلیل عدم مچ لغو شد.")
+                                        }
                                     }.onFailure { err ->
-                                        updateNotification("خطا در خرید: ${err.message}")
+                                        updateNotification("رد سفارش خرید: ${err.message}")
                                     }
                                 }
                             }
                         }.onFailure { err ->
                             handleError(err)
                         }
-                    } else if (holdingAsset && currentPositionPrice > 0.0 && currentPrice > 0.0) {
+                    } 
+                    // سناریوی فروش
+                    else if (holdingAsset && currentPositionPrice > 0.0 && currentPrice > 0.0) {
                         val deltaPct = ((currentPrice - currentPositionPrice) / currentPositionPrice) * 100.0
 
                         if (deltaPct >= 1.5 || deltaPct <= -2.0) {
@@ -92,12 +137,20 @@ class TradingService : Service() {
                             assetResult.onSuccess { assetBalance ->
                                 val cleanQty = WallexLiveClient.formatQuantity(symbol, assetBalance)
                                 if (cleanQty > 0.0) {
+                                    updateNotification("ثبت سفارش فروش در $currentPrice...")
                                     val sellResult = WallexLiveClient.executeOrder(apiKey, symbol, "SELL", cleanQty, currentPrice)
-                                    sellResult.onSuccess {
-                                        holdingAsset = false
-                                        currentPositionPrice = 0.0
-                                        val sign = if (deltaPct >= 0) "+" else ""
-                                        updateNotification("فروش انجام شد (${sign}${String.format(Locale.US, "%.2f", deltaPct)}%)")
+                                    sellResult.onSuccess { orderId ->
+                                        val isFilled = waitForOrderFill(apiKey, orderId, maxWaitSeconds = 20)
+                                        if (isFilled) {
+                                            holdingAsset = false
+                                            currentPositionPrice = 0.0
+                                            savePositionState(false, 0.0)
+                                            val sign = if (deltaPct >= 0) "+" else ""
+                                            updateNotification("فروش موفق (${sign}${String.format(Locale.US, "%.2f", deltaPct)}%)")
+                                        } else {
+                                            WallexLiveClient.cancelOrder(apiKey, orderId)
+                                            updateNotification("سفارش فروش کامل نشد و لغو گردید.")
+                                        }
                                     }.onFailure { err ->
                                         updateNotification("خطا در فروش: ${err.message}")
                                     }
@@ -108,16 +161,16 @@ class TradingService : Service() {
                         }
                     }
 
-                    delay(5000)
+                    delay(6000)
 
                 } catch (e: Exception) {
                     failureCount++
                     if (e is WallexException.AuthException) {
-                        updateNotification("توقف: کلید API والکس نامعتبر است")
+                        updateNotification("توقف: کلید API نامعتبر است")
                         stopSelf()
                         break
                     }
-                    val waitSec = (5 * failureCount).coerceAtMost(60)
+                    val waitSec = (6 * failureCount).coerceAtMost(60)
                     updateNotification("خطای ارتباط. تلاش مجدد در $waitSec ثانیه...")
                     delay(waitSec * 1000L)
                 }
@@ -125,12 +178,31 @@ class TradingService : Service() {
         }
     }
 
+    private suspend fun waitForOrderFill(apiKey: String, orderId: String, maxWaitSeconds: Int): Boolean {
+        var elapsed = 0
+        while (elapsed < maxWaitSeconds) {
+            delay(3000)
+            elapsed += 3
+            val statusResult = WallexLiveClient.checkOrderStatus(apiKey, orderId)
+            if (statusResult.isSuccess) {
+                val status = statusResult.getOrNull().orEmpty()
+                if (status == "FILLED" || status == "DONE" || status == "CLOSED") {
+                    return true
+                }
+                if (status == "CANCELED" || status == "REJECTED") {
+                    return false
+                }
+            }
+        }
+        return false
+    }
+
     private fun handleError(throwable: Throwable) {
         if (throwable is WallexException.AuthException) {
-            updateNotification("توقف: دسترسی نامعتبر است (401/403)")
+            updateNotification("توقف: دسترسی احراز هویت رد شد")
             stopSelf()
         } else {
-            updateNotification("خطای موجودی: ${throwable.localizedMessage}")
+            updateNotification("خطای حساب: ${throwable.localizedMessage}")
         }
     }
 
@@ -141,7 +213,7 @@ class TradingService : Service() {
 
     private fun buildNotification(text: String): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("ربات HM Hammer")
+            .setContentTitle("ربات تریدر HM Hammer")
             .setContentText(text)
             .setSmallIcon(android.R.drawable.ic_menu_compass)
             .setOngoing(true)
