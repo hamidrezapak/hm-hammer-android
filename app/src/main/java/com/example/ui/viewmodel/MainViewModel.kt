@@ -175,38 +175,43 @@ class MainViewModel : ViewModel() {
         val cleanKey = apiKey.trim()
         persistKeyToDisk(cleanKey)
         _wallexApiKey.value = cleanKey
+
         viewModelScope.launch {
             if (cleanKey.length < 8) {
                 _isApiConnected.value = false
-                val msg = "کلید API نامعتبر است (حداقل ۸ کاراکتر)"
+                val msg = "کلید معتبر نیست (حداقل ۸ کاراکتر)"
                 _lastEngineLog.value = msg
                 onResult(false, msg)
                 return@launch
             }
 
-            _lastEngineLog.value = "در حال احراز هویت و دریافت موجودی..."
+            _lastEngineLog.value = "در حال اعتبارسنجی کلید در والکس..."
             var fetchedBalance = 0.0
             var errorDetail = ""
-            
+
             val isSuccess = withContext(Dispatchers.IO) {
+                var conn: java.net.HttpURLConnection? = null
                 try {
                     val url = java.net.URL("https://api.wallex.ir/v1/account/balances")
-                    val conn = url.openConnection() as java.net.HttpURLConnection
-                    conn.requestMethod = "GET"
-                    conn.setRequestProperty("X-API-Key", cleanKey)
-                    conn.connectTimeout = 8000
-                    conn.readTimeout = 8000
+                    conn = (url.openConnection() as java.net.HttpURLConnection).apply {
+                        requestMethod = "GET"
+                        setRequestProperty("X-API-Key", cleanKey)
+                        setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36")
+                        setRequestProperty("Content-Type", "application/json")
+                        connectTimeout = 8000
+                        readTimeout = 8000
+                    }
 
                     val code = conn.responseCode
                     val stream = if (code in 200..299) conn.inputStream else conn.errorStream
-                    val response = stream.bufferedReader().readText()
+                    val response = stream?.bufferedReader()?.readText().orEmpty()
 
                     if (code in 200..299) {
                         val json = org.json.JSONObject(response)
-                        val resultObj = json.optJSONObject("result")
-                        val balances = resultObj?.optJSONObject("balances")
+                        val balances = json.optJSONObject("result")?.optJSONObject("balances")
                         val usdtObj = balances?.optJSONObject("USDT")
-                        fetchedBalance = usdtObj?.optDouble("value", 0.0) ?: 0.0
+                        val rawVal = usdtObj?.opt("value")?.toString() ?: "0.0"
+                        fetchedBalance = rawVal.toDoubleOrNull() ?: 0.0
                         true
                     } else {
                         errorDetail = "خطای صرافی ($code): $response"
@@ -215,6 +220,8 @@ class MainViewModel : ViewModel() {
                 } catch (e: Exception) {
                     errorDetail = "خطای اتصال شبکه: ${e.localizedMessage}"
                     false
+                } finally {
+                    conn?.disconnect()
                 }
             }
 
@@ -223,15 +230,11 @@ class MainViewModel : ViewModel() {
                 _usdtBalance.value = fetchedBalance
                 val successMsg = "اتصال برقرار شد. موجودی: $fetchedBalance USDT"
                 _lastEngineLog.value = successMsg
-                try {
-                    SecureKeyStore.saveKey(cleanKey)
-                } catch (e: Exception) {}
                 onResult(true, successMsg)
             } else {
                 _isApiConnected.value = false
-                val failMsg = if (errorDetail.isNotBlank()) errorDetail else "عدم موفقیت در احراز کلید"
-                _lastEngineLog.value = failMsg
-                onResult(false, failMsg)
+                _lastEngineLog.value = errorDetail
+                onResult(false, errorDetail)
             }
         }
     }
