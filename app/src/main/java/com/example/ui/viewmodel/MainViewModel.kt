@@ -423,6 +423,7 @@ class MainViewModel : ViewModel() {
         _auditLogs.value.forEach { sb.append("[${it.timestamp}] [${it.eventType}] ${it.message}\n") }
         return sb.toString()
 
+    }
     fun startRealEngine(context: android.content.Context, symbol: String = "BTCUSDT") {
         val key = _wallexApiKey.value
         if (key.isBlank()) {
