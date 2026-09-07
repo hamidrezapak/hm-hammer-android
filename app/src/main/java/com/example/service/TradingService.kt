@@ -41,7 +41,7 @@ class TradingService : Service() {
     }
 
     private fun getPositionFile(): File {
-        val dir = File("/data/data/com.example/files")
+        val dir = File("/data/data/com.aistudio.hmhammer.pro7x9/files")
         if (!dir.exists()) dir.mkdirs()
         return File(dir, "active_position.json")
     }
