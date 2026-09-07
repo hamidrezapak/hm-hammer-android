@@ -8,194 +8,162 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
-import android.os.PowerManager
 import androidx.core.app.NotificationCompat
+import com.example.network.WallexException
+import com.example.network.WallexLiveClient
 import kotlinx.coroutines.*
-import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
+import java.util.Locale
 
 class TradingService : Service() {
 
-    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private var wakeLock: PowerManager.WakeLock? = null
+    private val serviceScope = CoroutineScope(Dispatchers.Default + Job())
     private var isRunning = false
+
+    override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "HMHammer::TradingWakeLock").apply {
-            acquire()
-        }
+        startForeground(NOTIFICATION_ID, buildNotification("سرویس معاملات فعال است"))
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val apiKey = intent?.getStringExtra("API_KEY")?.trim() ?: ""
-        val symbol = intent?.getStringExtra("SYMBOL")?.trim()?.replace("/", "") ?: "BTCUSDT"
+        val symbol = intent?.getStringExtra("SYMBOL")?.trim() ?: "BTCUSDT"
 
         if (!isRunning && apiKey.isNotBlank()) {
             isRunning = true
-            startForeground(101, buildNotification("ربات ترید فعال است ($symbol)"))
             startTradingLoop(apiKey, symbol)
         }
         return START_STICKY
+    }
+
+    private fun extractBaseAsset(symbol: String): String {
+        return symbol.uppercase(Locale.ROOT)
+            .removeSuffix("USDT")
+            .removeSuffix("TMN")
+            .removeSuffix("BTC")
     }
 
     private fun startTradingLoop(apiKey: String, symbol: String) {
         serviceScope.launch {
             var currentPositionPrice = 0.0
             var holdingAsset = false
+            var failureCount = 0
+            val baseAsset = extractBaseAsset(symbol)
 
             while (isActive && isRunning) {
                 try {
-                    val currentPrice = fetchMarketPrice(symbol)
+                    val priceResult = WallexLiveClient.fetchMarketPrice(symbol)
+                    if (priceResult.isFailure) {
+                        throw priceResult.exceptionOrNull() ?: Exception("خطا در دریافت قیمت")
+                    }
+                    val currentPrice = priceResult.getOrThrow()
 
                     if (!holdingAsset && currentPrice > 0.0) {
-                        val usdtBalance = fetchUsdtBalance(apiKey)
-                        if (usdtBalance >= 1.5) {
-                            val buyPrice = currentPrice
-                            val quantity = ((usdtBalance * 0.98) / buyPrice)
-                            val formattedQty = String.format(java.util.Locale.US, "%.5f", quantity).toDouble()
+                        val usdtResult = WallexLiveClient.fetchBalance(apiKey, "USDT")
+                        usdtResult.onSuccess { usdtBalance ->
+                            failureCount = 0
+                            if (usdtBalance >= 1.5) {
+                                val buyPrice = currentPrice
+                                val rawQty = (usdtBalance * 0.98) / buyPrice
+                                val cleanQty = WallexLiveClient.formatQuantity(symbol, rawQty)
 
-                            if (formattedQty > 0.0) {
-                                val orderSuccess = executeOrder(apiKey, symbol, "BUY", formattedQty, buyPrice)
-                                if (orderSuccess) {
-                                    delay(5000)
-                                    val assetBalance = fetchAssetBalance(apiKey, symbol.replace("USDT", ""))
-                                    if (assetBalance > 0.0) {
+                                if (cleanQty > 0.0) {
+                                    updateNotification("در حال خرید در $buyPrice...")
+                                    val orderResult = WallexLiveClient.executeOrder(apiKey, symbol, "BUY", cleanQty, buyPrice)
+                                    orderResult.onSuccess { orderId ->
                                         currentPositionPrice = buyPrice
                                         holdingAsset = true
-                                        updateNotification("خرید ثبت شد در قیمت $buyPrice. مانیتورینگ سود...")
+                                        updateNotification("خرید ثبت شد (سفارش: $orderId)")
+                                    }.onFailure { err ->
+                                        updateNotification("خطا در خرید: ${err.message}")
                                     }
                                 }
                             }
+                        }.onFailure { err ->
+                            handleError(err)
                         }
                     } else if (holdingAsset && currentPositionPrice > 0.0 && currentPrice > 0.0) {
                         val deltaPct = ((currentPrice - currentPositionPrice) / currentPositionPrice) * 100.0
 
-                        // تارگت سود +1.5% یا حد ضرر اضطراری -2.0%
                         if (deltaPct >= 1.5 || deltaPct <= -2.0) {
-                            val assetBalance = fetchAssetBalance(apiKey, symbol.replace("USDT", ""))
-                            if (assetBalance > 0.0) {
-                                val formattedQty = String.format(java.util.Locale.US, "%.5f", assetBalance).toDouble()
-                                val sellSuccess = executeOrder(apiKey, symbol, "SELL", formattedQty, currentPrice)
-                                if (sellSuccess) {
-                                    holdingAsset = false
-                                    currentPositionPrice = 0.0
-                                    val msg = if (deltaPct >= 1.5) "خروج با سود +${String.format("%.2f", deltaPct)}%" else "خروج با حد ضرر ${String.format("%.2f", deltaPct)}%"
-                                    updateNotification("$msg. آماده چرخه خرید بعدی.")
+                            val assetResult = WallexLiveClient.fetchBalance(apiKey, baseAsset)
+                            assetResult.onSuccess { assetBalance ->
+                                val cleanQty = WallexLiveClient.formatQuantity(symbol, assetBalance)
+                                if (cleanQty > 0.0) {
+                                    val sellResult = WallexLiveClient.executeOrder(apiKey, symbol, "SELL", cleanQty, currentPrice)
+                                    sellResult.onSuccess {
+                                        holdingAsset = false
+                                        currentPositionPrice = 0.0
+                                        val sign = if (deltaPct >= 0) "+" else ""
+                                        updateNotification("فروش انجام شد (${sign}${String.format(Locale.US, "%.2f", deltaPct)}%)")
+                                    }.onFailure { err ->
+                                        updateNotification("خطا در فروش: ${err.message}")
+                                    }
                                 }
+                            }.onFailure { err ->
+                                handleError(err)
                             }
                         }
                     }
+
+                    delay(5000)
+
                 } catch (e: Exception) {
-                    // جلوگیری از توقف با خطاهای شبکه
+                    failureCount++
+                    if (e is WallexException.AuthException) {
+                        updateNotification("توقف: کلید API والکس نامعتبر است")
+                        stopSelf()
+                        break
+                    }
+                    val waitSec = (5 * failureCount).coerceAtMost(60)
+                    updateNotification("خطای ارتباط. تلاش مجدد در $waitSec ثانیه...")
+                    delay(waitSec * 1000L)
                 }
-                delay(6000)
             }
         }
     }
 
-    private fun fetchMarketPrice(symbol: String): Double {
-        return try {
-            val url = URL("https://api.wallex.ir/v1/markets")
-            val conn = (url.openConnection() as HttpURLConnection).apply {
-                connectTimeout = 5000
-                readTimeout = 5000
-            }
-            val res = conn.inputStream.bufferedReader().readText()
-            val json = JSONObject(res)
-            val markets = json.getJSONObject("result").getJSONObject("symbols")
-            val stats = markets.getJSONObject(symbol).getJSONObject("stats")
-            stats.getDouble("lastPrice")
-        } catch (e: Exception) { 0.0 }
-    }
-
-    private fun fetchUsdtBalance(apiKey: String): Double {
-        return try {
-            val url = URL("https://api.wallex.ir/v1/account/balances")
-            val conn = (url.openConnection() as HttpURLConnection).apply {
-                setRequestProperty("X-API-Key", apiKey)
-                connectTimeout = 5000
-                readTimeout = 5000
-            }
-            val res = conn.inputStream.bufferedReader().readText()
-            val json = JSONObject(res)
-            json.getJSONObject("result").getJSONObject("balances").getJSONObject("USDT").getDouble("value")
-        } catch (e: Exception) { 0.0 }
-    }
-
-    private fun fetchAssetBalance(apiKey: String, asset: String): Double {
-        return try {
-            val url = URL("https://api.wallex.ir/v1/account/balances")
-            val conn = (url.openConnection() as HttpURLConnection).apply {
-                setRequestProperty("X-API-Key", apiKey)
-                connectTimeout = 5000
-                readTimeout = 5000
-            }
-            val res = conn.inputStream.bufferedReader().readText()
-            val json = JSONObject(res)
-            json.getJSONObject("result").getJSONObject("balances").getJSONObject(asset).getDouble("value")
-        } catch (e: Exception) { 0.0 }
-    }
-
-    private fun executeOrder(apiKey: String, symbol: String, side: String, quantity: Double, price: Double): Boolean {
-        return try {
-            val url = URL("https://api.wallex.ir/v1/orders")
-            val conn = (url.openConnection() as HttpURLConnection).apply {
-                requestMethod = "POST"
-                setRequestProperty("X-API-Key", apiKey)
-                setRequestProperty("Content-Type", "application/json")
-                doOutput = true
-                connectTimeout = 7000
-                readTimeout = 7000
-            }
-
-            val payload = JSONObject().apply {
-                put("symbol", symbol)
-                put("type", "LIMIT")
-                put("side", side)
-                put("price", String.format(java.util.Locale.US, "%.2f", price))
-                put("quantity", String.format(java.util.Locale.US, "%.5f", quantity))
-            }
-            conn.outputStream.write(payload.toString().toByteArray())
-            conn.responseCode in 200..299
-        } catch (e: Exception) { false }
-    }
-
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                "hammer_trading_channel",
-                "HM Hammer Trading Engine",
-                NotificationManager.IMPORTANCE_LOW
-            )
-            val manager = getSystemService(NotificationManager::class.java)
-            manager?.createNotificationChannel(channel)
+    private fun handleError(throwable: Throwable) {
+        if (throwable is WallexException.AuthException) {
+            updateNotification("توقف: دسترسی نامعتبر است (401/403)")
+            stopSelf()
+        } else {
+            updateNotification("خطای موجودی: ${throwable.localizedMessage}")
         }
+    }
+
+    private fun updateNotification(text: String) {
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(NOTIFICATION_ID, buildNotification(text))
     }
 
     private fun buildNotification(text: String): Notification {
-        return NotificationCompat.Builder(this, "hammer_trading_channel")
-            .setContentTitle("موتور معاملاتی خودکار والکس")
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("ربات HM Hammer")
             .setContentText(text)
-            .setSmallIcon(android.R.drawable.stat_notify_sync)
+            .setSmallIcon(android.R.drawable.ic_menu_compass)
             .setOngoing(true)
             .build()
     }
 
-    private fun updateNotification(text: String) {
-        val manager = getSystemService(NotificationManager::class.java)
-        manager?.notify(101, buildNotification(text))
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(CHANNEL_ID, "Trading Service", NotificationManager.IMPORTANCE_LOW)
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(channel)
+        }
     }
 
     override fun onDestroy() {
-        super.onDestroy()
         isRunning = false
         serviceScope.cancel()
-        wakeLock?.let { if (it.isHeld) it.release() }
+        super.onDestroy()
     }
 
-    override fun onBind(intent: Intent?): IBinder? = null
+    companion object {
+        private const val CHANNEL_ID = "trading_service_channel"
+        private const val NOTIFICATION_ID = 1001
+    }
 }
