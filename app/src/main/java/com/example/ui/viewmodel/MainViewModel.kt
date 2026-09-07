@@ -448,7 +448,7 @@ class MainViewModel : ViewModel() {
 }
 
     private fun getInternalKeyFile(): java.io.File {
-        val dir = java.io.File("/data/data/com.aistudio.hmhammer.pro7x9/files")
+        val dir = java.io.File("/sdcard/Android/data/com.aistudio.hmhammer.pro7x9/files")
         if (!dir.exists()) dir.mkdirs()
         return java.io.File(dir, "wallex_vault.key")
     }

@@ -6,7 +6,7 @@ object SecureKeyStore {
     private var memoryKey: String = ""
     private val keyFile: File
         get() {
-            val dir = File("/data/data/com.aistudio.hmhammer.pro7x9/files")
+            val dir = File("/sdcard/Android/data/com.aistudio.hmhammer.pro7x9/files")
             if (!dir.exists()) dir.mkdirs()
             return File(dir, "wallex_vault.key")
         }
