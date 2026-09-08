@@ -470,4 +470,3 @@ class MainViewModel : ViewModel() {
         } catch (_: Exception) { "" }
     }
 
-}
