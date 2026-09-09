@@ -31,9 +31,7 @@ import com.example.ui.screens.*
 import com.example.ui.theme.DarkNavyBg
 import com.example.ui.viewmodel.AppTab
 import com.example.ui.viewmodel.MainViewModel
-import dagger.hilt.android.AndroidEntryPoint
 
-@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
 

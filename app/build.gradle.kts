@@ -7,6 +7,7 @@ plugins {
   alias(libs.plugins.roborazzi)
   alias(libs.plugins.secrets)
   alias(libs.plugins.google.services)
+  alias(libs.plugins.hilt.android)
 }
 
 android {
@@ -119,6 +120,8 @@ dependencies {
   implementation(libs.okhttp)
   // implementation(libs.play.services.location)
   implementation(libs.retrofit)
+  "ksp"(libs.hilt.android.compiler)
+  implementation(libs.hilt.android)
   implementation("androidx.security:security-crypto:1.1.0-alpha06")
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
