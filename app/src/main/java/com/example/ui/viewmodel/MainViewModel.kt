@@ -173,7 +173,7 @@ class MainViewModel : ViewModel() {
 
         fun verifyAndSaveWallexKey(apiKey: String, onResult: (Boolean, String) -> Unit) {
         val cleanKey = apiKey.trim()
-        persistKeyToDisk(cleanKey)
+        com.example.network.SecureKeyStore.saveKey(cleanKey)
         _wallexApiKey.value = cleanKey
 
         viewModelScope.launch {
@@ -375,33 +375,75 @@ class MainViewModel : ViewModel() {
     }
 
     fun closeTradeManually(order: TradeOrder) {
-        closeOrder(order.timestamp, isProfit = true)
+        closeOrderWithRealPrice(order.timestamp, reason = "Manual Close")
     }
 
-    fun closeOrder(orderTimestamp: Long, isProfit: Boolean) {
-        val order = _trades.value.find { it.timestamp == orderTimestamp } ?: return
-        val tradeAmountUsdt = order.amountTmn / _tomanRate.value
-        val multiplier = if (isProfit) 1.045 else 0.98
-        val payout = tradeAmountUsdt * multiplier
-        val diffUsdt = payout - tradeAmountUsdt
+    fun closeOrderWithRealPrice(orderTimestamp: Long, reason: String = "Manual Close") {
+        viewModelScope.launch {
+            val order = _trades.value.find { it.timestamp == orderTimestamp } ?: return@launch
+            if (order.status != TradeStatus.OPEN) return@launch
 
-        _usdtBalance.value += payout
-        _trades.value = _trades.value.map {
-            if (it.timestamp == orderTimestamp) {
-                it.copy(
-                    status = TradeStatus.CLOSED,
-                    exitPrice = if (isProfit) it.tp1 else it.stopLoss,
-                    profitUsdt = diffUsdt,
-                    pnlPercent = if (isProfit) 4.5 else -2.0,
-                    exitTimestamp = System.currentTimeMillis(),
-                    closeReason = if (isProfit) "Take Profit" else "Stop Loss"
+            _lastEngineLog.value = "در حال دریافت قیمت واقعی بازار برای بستن پوزیشن..."
+
+            val priceResult = WallexLiveClient.fetchMarketPrice(order.symbol)
+            val currentPrice = priceResult.getOrNull()
+            if (currentPrice == null || currentPrice <= 0.0) {
+                val err = "دریافت قیمت واقعی بازار ناموفق بود. پوزیشن بسته نشد."
+                _lastEngineLog.value = err
+                addAuditLog("CLOSE_ERROR", err, false)
+                return@launch
+            }
+
+            val tradeAmountUsdt = order.amountTmn / _tomanRate.value
+            val quantity = tradeAmountUsdt / order.entryPrice
+
+            var exitOrderId = "LOCAL_EXEC"
+            val currentApiKey = _wallexApiKey.value
+            if (currentApiKey.isNotBlank()) {
+                val closingSide = if (order.side.equals("BUY", ignoreCase = true)) "SELL" else "BUY"
+                val orderResult = WallexLiveClient.executeOrder(
+                    apiKey = currentApiKey,
+                    symbol = order.symbol,
+                    side = closingSide,
+                    quantity = quantity,
+                    price = currentPrice
                 )
-            } else it
-        }
+                if (orderResult.isSuccess) {
+                    exitOrderId = orderResult.getOrDefault("SUCCESS")
+                } else {
+                    val errMsg = orderResult.exceptionOrNull()?.message ?: "خطای ناشناخته صرافی"
+                    _lastEngineLog.value = "هشدار: بستن سفارش در صرافی ناموفق بود: $errMsg"
+                    addAuditLog("CLOSE_ORDER_FAIL", errMsg, false)
+                    return@launch
+                }
+            }
 
-        val resText = "معامله ${order.symbol} بسته شد. سود/زیان: ${if (diffUsdt >= 0) "+$" else "-$"}${String.format("%.2f", kotlin.math.abs(diffUsdt))} USDT"
-        _lastEngineLog.value = resText
-        addAuditLog("ORDER_CLOSE", resText, diffUsdt >= 0)
+            val entryValue = order.entryPrice * quantity
+            val exitValue = currentPrice * quantity
+            val isBuy = order.side.equals("BUY", ignoreCase = true)
+            val diffUsdt = if (isBuy) exitValue - entryValue else entryValue - exitValue
+            val pnlPercent = (diffUsdt / entryValue) * 100.0
+            val payoutUsdt = tradeAmountUsdt + diffUsdt
+
+            _usdtBalance.value += payoutUsdt
+            _trades.value = _trades.value.map {
+                if (it.timestamp == orderTimestamp) {
+                    it.copy(
+                        status = TradeStatus.CLOSED,
+                        exitPrice = currentPrice,
+                        profitUsdt = diffUsdt,
+                        pnlPercent = pnlPercent,
+                        exitTimestamp = System.currentTimeMillis(),
+                        closeReason = "$reason ($exitOrderId)"
+                    )
+                } else it
+            }
+
+            val sign = if (diffUsdt >= 0) "+" else ""
+            val resText = "معامله ${order.symbol} بسته شد. سود/زیان واقعی: ${sign}${String.format(Locale.US, "%.2f", diffUsdt)} USDT (${String.format(Locale.US, "%.2f", pnlPercent)}%)"
+            _lastEngineLog.value = resText
+            addAuditLog("ORDER_CLOSE", resText, diffUsdt >= 0)
+        }
     }
 
     suspend fun queryAiCopilot(userQuestion: String): String {
@@ -450,23 +492,4 @@ class MainViewModel : ViewModel() {
         _lastEngineLog.value = "Trading engine stopped"
     }
 }
-
-    private fun getInternalKeyFile(): java.io.File {
-        val dir = java.io.File("/sdcard/Android/data/com.aistudio.hmhammer.pro7x9/files")
-        if (!dir.exists()) dir.mkdirs()
-        return java.io.File(dir, "wallex_vault.key")
-    }
-
-    private fun persistKeyToDisk(key: String) {
-        try {
-            getInternalKeyFile().writeText(key.trim())
-        } catch (_: Exception) {}
-    }
-
-    private fun readKeyFromDisk(): String {
-        return try {
-            val f = getInternalKeyFile()
-            if (f.exists()) f.readText().trim() else ""
-        } catch (_: Exception) { "" }
-    }
 
