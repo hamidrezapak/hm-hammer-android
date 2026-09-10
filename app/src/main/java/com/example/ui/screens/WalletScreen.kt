@@ -16,9 +16,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.ui.components.LanguageOption
 import com.example.ui.theme.AppLocale
 import com.example.ui.viewmodel.MainViewModel
+import com.example.ui.viewmodel.pilot.WalletViewModel
 
 @Composable
 fun WalletScreen(
@@ -26,8 +28,15 @@ fun WalletScreen(
     currentLanguage: LanguageOption = LanguageOption.FA
 ) {
     val context = LocalContext.current
+    val walletViewModel: WalletViewModel = hiltViewModel()
+    val uiState by walletViewModel.uiState.collectAsState()
     var apiKeyInput by remember { mutableStateOf(com.example.network.SecureKeyStore.getKey()) }
-    var isApiConnected by remember { mutableStateOf(false) }
+
+    LaunchedEffect(uiState.message) {
+        uiState.message?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -53,15 +62,15 @@ fun WalletScreen(
                 AssetCard(
                     modifier = Modifier.weight(1f),
                     title = AppLocale.t("wallet_usdt", currentLanguage),
-                    amount = if (isApiConnected) "$ 0.00" else "$ 0.00",
-                    subtitle = if (isApiConnected) "Live Liquidity" else AppLocale.t("wallet_awaiting", currentLanguage),
+                    amount = if (uiState.isConnected) "$ ${"%.2f".format(uiState.usdtBalance)}" else "$ 0.00",
+                    subtitle = if (uiState.isConnected) "Live Liquidity" else AppLocale.t("wallet_awaiting", currentLanguage),
                     valueColor = Color(0xFF00E676)
                 )
                 AssetCard(
                     modifier = Modifier.weight(1f),
                     title = AppLocale.t("wallet_tmn", currentLanguage),
-                    amount = if (isApiConnected) "۰ تومان" else "۰ تومان",
-                    subtitle = if (isApiConnected) "ارزش ریالی روز" else AppLocale.t("wallet_awaiting", currentLanguage),
+                    amount = if (uiState.isConnected) "۰ تومان" else "۰ تومان",
+                    subtitle = if (uiState.isConnected) "ارزش ریالی روز" else AppLocale.t("wallet_awaiting", currentLanguage),
                     valueColor = Color(0xFF38BDF8)
                 )
             }
@@ -120,6 +129,7 @@ fun WalletScreen(
                         onValueChange = { apiKeyInput = it },
                         placeholder = { Text(AppLocale.t("api_hint", currentLanguage), fontSize = 11.sp, color = Color.Gray) },
                         modifier = Modifier.fillMaxWidth(),
+                        enabled = !uiState.isVerifying,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Color(0xFF00E676),
                             unfocusedBorderColor = Color(0xFF30363D),
@@ -132,18 +142,21 @@ fun WalletScreen(
                     Button(
                         onClick = {
                             if (apiKeyInput.isNotBlank()) {
-                com.example.network.SecureKeyStore.saveKey(apiKeyInput)
-                                isApiConnected = true
-                                Toast.makeText(context, "کلید API با موفقیت در دستگاه رمزنگاری شد", Toast.LENGTH_SHORT).show()
+                                walletViewModel.verifyAndSaveKey(apiKeyInput)
                             } else {
                                 Toast.makeText(context, "لطفاً کلید API را وارد کنید", Toast.LENGTH_SHORT).show()
                             }
                         },
+                        enabled = !uiState.isVerifying,
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676), contentColor = Color.Black),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth().height(44.dp)
                     ) {
-                        Text(AppLocale.t("save_api", currentLanguage), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        if (uiState.isVerifying) {
+                            Text("در حال بررسی...", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        } else {
+                            Text(AppLocale.t("save_api", currentLanguage), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
                     }
                 }
             }
