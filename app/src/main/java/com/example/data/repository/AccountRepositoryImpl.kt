@@ -20,6 +20,8 @@ class AccountRepositoryImpl @Inject constructor(
         AppResult.Error(mapHttpError(e), e)
     } catch (e: IOException) {
         AppResult.Error("خطای اتصال شبکه: ${e.localizedMessage}", e)
+    } catch (e: Exception) {
+        AppResult.Error("خطای غیرمنتظره در پردازش پاسخ صرافی: ${e.localizedMessage ?: e.javaClass.simpleName}", e)
     }
 
     override suspend fun saveApiKey(apiKey: String) {
