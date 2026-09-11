@@ -6,6 +6,11 @@ import com.example.ai.AICopilotEngine
 import com.example.model.TradeOrder
 import com.example.model.TradeStatus
 import com.example.network.WallexLiveClient
+import com.example.core.result.AppResult
+import com.example.domain.model.OrderSide
+import com.example.domain.usecase.order.PlaceOrderUseCase
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,7 +62,10 @@ data class AuditLog(
     val isSuccess: Boolean = true
 )
 
-class MainViewModel : ViewModel() {
+@HiltViewModel
+class MainViewModel @Inject constructor(
+    private val placeOrderUseCase: PlaceOrderUseCase
+) : ViewModel() {
     private val _currentTab = MutableStateFlow(AppTab.TRADE)
     val currentTab: StateFlow<AppTab> = _currentTab.asStateFlow()
 
@@ -277,7 +285,7 @@ class MainViewModel : ViewModel() {
                 delay(15000)
                 if (!_isEngineRunning.value) break
                 if (_trades.value.none { it.status == TradeStatus.OPEN } && _usdtBalance.value >= 5.0) {
-                    executeOrder("BUY", maxAllocation = false, isAuto = true)
+                    executeOrder("BUY", allocationPercent = 20, isAuto = true)
                 }
             }
         }
@@ -298,7 +306,7 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    fun executeOrder(side: String, maxAllocation: Boolean, isAuto: Boolean = false) {
+    fun executeOrder(side: String, allocationPercent: Int, isAuto: Boolean = false) {
         viewModelScope.launch {
             val bal = _usdtBalance.value
             if (bal <= 0.0) {
@@ -308,7 +316,7 @@ class MainViewModel : ViewModel() {
                 return@launch
             }
 
-            val tradeAmountUsdt = if (maxAllocation) bal * 0.8 else minOf(bal * 0.3, 15.0)
+            val tradeAmountUsdt = bal * (allocationPercent.coerceIn(1, 100) / 100.0)
             if (tradeAmountUsdt < 2.0) {
                 val err = "موجودی برای ورود به این پوزیشن ناکافی است."
                 _lastEngineLog.value = err
@@ -322,22 +330,15 @@ class MainViewModel : ViewModel() {
             val quantity = tradeAmountUsdt / price
 
             var liveOrderId = "LOCAL_EXEC"
-            val currentApiKey = _wallexApiKey.value
-            if (currentApiKey.isNotBlank()) {
-                val orderResult = WallexLiveClient.placeOrder(
-                    apiKey = currentApiKey,
-                    symbol = _selectedPair.value,
-                    type = side,
-                    quantity = quantity,
-                    price = price
-                )
-                if (orderResult.isSuccess) {
-                    liveOrderId = orderResult.getOrDefault("SUCCESS")
+            val orderSide = if (side.equals("BUY", ignoreCase = true)) OrderSide.BUY else OrderSide.SELL
+            when (val orderResult = placeOrderUseCase(_selectedPair.value, orderSide, quantity, price)) {
+                is AppResult.Success -> {
+                    liveOrderId = orderResult.data
                     addAuditLog("EXCHANGE_ORDER_SUCCESS", "سفارش واقعی در صرافی ثبت گردید: $liveOrderId", true)
-                } else {
-                    val errMsg = orderResult.exceptionOrNull()?.message ?: "خطای ناشناخته صرافی"
-                    addAuditLog("EXCHANGE_ORDER_FAIL", errMsg, false)
-                    _lastEngineLog.value = "هشدار صرافی: $errMsg"
+                }
+                is AppResult.Error -> {
+                    addAuditLog("EXCHANGE_ORDER_FAIL", orderResult.message, false)
+                    _lastEngineLog.value = "هشدار صرافی: ${orderResult.message}"
                 }
             }
 

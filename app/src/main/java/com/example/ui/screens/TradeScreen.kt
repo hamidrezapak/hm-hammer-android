@@ -225,7 +225,7 @@ viewModel: MainViewModel) {
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Button(
-                onClick = { viewModel.executeOrder("BUY", true) },
+                onClick = { viewModel.executeOrder("BUY", selectedAllocation) },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853)),
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier.weight(1f).height(48.dp)
@@ -234,7 +234,7 @@ viewModel: MainViewModel) {
             }
 
             Button(
-                onClick = { viewModel.executeOrder("SELL", true) },
+                onClick = { viewModel.executeOrder("SELL", selectedAllocation) },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD50000)),
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier.weight(1f).height(48.dp)
