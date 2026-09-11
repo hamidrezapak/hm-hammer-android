@@ -9,6 +9,7 @@ import com.example.network.WallexLiveClient
 import com.example.core.result.AppResult
 import com.example.domain.model.OrderSide
 import com.example.domain.usecase.order.PlaceOrderUseCase
+import com.example.domain.usecase.account.FetchBalanceUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -63,8 +64,10 @@ data class AuditLog(
 )
 
 @HiltViewModel
+@HiltViewModel
 class MainViewModel @Inject constructor(
-    private val placeOrderUseCase: PlaceOrderUseCase
+    private val placeOrderUseCase: PlaceOrderUseCase,
+    private val fetchBalanceUseCase: FetchBalanceUseCase
 ) : ViewModel() {
     private val _currentTab = MutableStateFlow(AppTab.TRADE)
     val currentTab: StateFlow<AppTab> = _currentTab.asStateFlow()
@@ -308,7 +311,16 @@ class MainViewModel @Inject constructor(
 
     fun executeOrder(side: String, allocationPercent: Int, isAuto: Boolean = false) {
         viewModelScope.launch {
-            val bal = _usdtBalance.value
+            val balanceResult = fetchBalanceUseCase()
+            val bal = when (balanceResult) {
+                is AppResult.Success -> balanceResult.data.also { _usdtBalance.value = it }
+                is AppResult.Error -> {
+                    val err = "دریافت موجودی واقعی ناموفق بود: ${balanceResult.message}"
+                    _lastEngineLog.value = err
+                    addAuditLog("BALANCE_FETCH_ERROR", err, false)
+                    return@launch
+                }
+            }
             if (bal <= 0.0) {
                 val err = "موجودی حساب صرافی ۰ است. امکان معامله وجود ندارد."
                 _lastEngineLog.value = err
