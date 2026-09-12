@@ -2,11 +2,13 @@ package com.example.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +23,7 @@ import com.example.ui.components.LanguageOption
 import com.example.ui.theme.AppLocale
 import com.example.ui.viewmodel.MainViewModel
 import com.example.ui.viewmodel.pilot.WalletViewModel
+import java.util.Locale
 
 @Composable
 fun WalletScreen(
@@ -45,15 +48,44 @@ fun WalletScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
-            Text(
-                text = AppLocale.t("wallet_header", currentLanguage),
-                color = Color.Gray,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = AppLocale.t("wallet_header", currentLanguage),
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                if (uiState.isConnected) {
+                    Row(
+                        modifier = Modifier.clickable { walletViewModel.refreshAllBalances() },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (uiState.isVerifying) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(14.dp),
+                                strokeWidth = 2.dp,
+                                color = Color(0xFF00E676)
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.Refresh,
+                                contentDescription = "بروزرسانی",
+                                tint = Color(0xFF00E676),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("بروزرسانی", color = Color(0xFF00E676), fontSize = 11.sp)
+                    }
+                }
+            }
         }
 
-        // کارت‌های دارایی واقعی و بدون ارقام فیک
+        // کارت‌های دارایی واقعی
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -62,14 +94,14 @@ fun WalletScreen(
                 AssetCard(
                     modifier = Modifier.weight(1f),
                     title = AppLocale.t("wallet_usdt", currentLanguage),
-                    amount = if (uiState.isConnected) "$ ${"%.2f".format(uiState.usdtBalance)}" else "$ 0.00",
+                    amount = if (uiState.isConnected) "$ ${String.format(Locale.US, "%.2f", uiState.usdtBalance)}" else "$ 0.00",
                     subtitle = if (uiState.isConnected) "Live Liquidity" else AppLocale.t("wallet_awaiting", currentLanguage),
                     valueColor = Color(0xFF00E676)
                 )
                 AssetCard(
                     modifier = Modifier.weight(1f),
                     title = AppLocale.t("wallet_tmn", currentLanguage),
-                    amount = if (uiState.isConnected) "۰ تومان" else "۰ تومان",
+                    amount = if (uiState.isConnected) "${String.format(Locale.US, "%,.0f", uiState.tmnBalance)} تومان" else "۰ تومان",
                     subtitle = if (uiState.isConnected) "ارزش ریالی روز" else AppLocale.t("wallet_awaiting", currentLanguage),
                     valueColor = Color(0xFF38BDF8)
                 )
@@ -84,14 +116,14 @@ fun WalletScreen(
                 AssetCard(
                     modifier = Modifier.weight(1f),
                     title = AppLocale.t("wallet_btc", currentLanguage),
-                    amount = "0.0000 BTC",
+                    amount = if (uiState.isConnected) "${String.format(Locale.US, "%.6f", uiState.btcBalance)} BTC" else "0.0000 BTC",
                     subtitle = "Spot / Cold Vault",
                     valueColor = Color.White
                 )
                 AssetCard(
                     modifier = Modifier.weight(1f),
                     title = AppLocale.t("wallet_trx", currentLanguage),
-                    amount = "0.00 TRX",
+                    amount = if (uiState.isConnected) "${String.format(Locale.US, "%.2f", uiState.trxBalance)} TRX" else "0.00 TRX",
                     subtitle = "Fee Reserve",
                     valueColor = Color(0xFFFFB703)
                 )
