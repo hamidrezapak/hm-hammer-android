@@ -64,7 +64,6 @@ data class AuditLog(
 )
 
 @HiltViewModel
-@HiltViewModel
 class MainViewModel @Inject constructor(
     private val placeOrderUseCase: PlaceOrderUseCase,
     private val fetchBalanceUseCase: FetchBalanceUseCase
