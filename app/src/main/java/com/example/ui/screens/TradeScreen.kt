@@ -105,6 +105,38 @@ viewModel: MainViewModel) {
             shape = RoundedCornerShape(12.dp)
         ) {
             Row(
+                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("BTCUSDT", "BTCTMN").forEach { pair ->
+                    val isSelected = currentPair == pair
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .background(
+                                if (isSelected) Color(0xFF00E5FF) else Color(0xFF21262D),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .clickable { viewModel.setSelectedPair(pair) }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = pair,
+                            color = if (isSelected) Color.Black else Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+        }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(14.dp),

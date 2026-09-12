@@ -141,6 +141,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun setTab(tab: AppTab) { _currentTab.value = tab }
+    fun setSelectedPair(symbol: String) { _selectedPair.value = symbol }
     fun setHistorySearchQuery(query: String) { historySearchQuery.value = query }
     fun setHistorySymbolFilter(sym: String) { historySymbolFilter.value = sym }
     fun setHistorySideFilter(side: String) { historySideFilter.value = side }
@@ -308,9 +309,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    private fun quoteAssetOf(symbol: String): String =
+        if (symbol.uppercase(java.util.Locale.ROOT).endsWith("TMN")) "TMN" else "USDT"
+
     fun executeOrder(side: String, allocationPercent: Int, isAuto: Boolean = false) {
         viewModelScope.launch {
-            val balanceResult = fetchBalanceUseCase()
+            val balanceResult = fetchBalanceUseCase(quoteAssetOf(_selectedPair.value))
             val bal = when (balanceResult) {
                 is AppResult.Success -> balanceResult.data.also { _usdtBalance.value = it }
                 is AppResult.Error -> {

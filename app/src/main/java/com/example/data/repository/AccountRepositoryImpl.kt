@@ -6,6 +6,7 @@ import com.example.domain.repository.AccountRepository
 import com.example.network.SecureKeyStore
 import retrofit2.HttpException
 import java.io.IOException
+import java.util.Locale
 import javax.inject.Inject
 
 class AccountRepositoryImpl @Inject constructor(
@@ -22,6 +23,22 @@ class AccountRepositoryImpl @Inject constructor(
         AppResult.Error("خطای اتصال شبکه: ${e.localizedMessage}", e)
     } catch (e: Exception) {
         AppResult.Error("خطای غیرمنتظره در پردازش پاسخ صرافی: ${e.localizedMessage ?: e.javaClass.simpleName}", e)
+    }
+
+    override suspend fun fetchBalance(asset: String): AppResult<Double> {
+        val apiKey = SecureKeyStore.getKey()
+        if (apiKey.isBlank()) return AppResult.Error("کلید API تنظیم نشده است")
+        return try {
+            val response = api.getBalances(apiKey)
+            val value = response.result.balances[asset.uppercase(Locale.ROOT)]?.value?.toDoubleOrNull() ?: 0.0
+            AppResult.Success(value)
+        } catch (e: HttpException) {
+            AppResult.Error(mapHttpError(e), e)
+        } catch (e: IOException) {
+            AppResult.Error("خطای اتصال شبکه: ${e.localizedMessage}", e)
+        } catch (e: Exception) {
+            AppResult.Error("خطای غیرمنتظره در پردازش پاسخ صرافی: ${e.localizedMessage ?: e.javaClass.simpleName}", e)
+        }
     }
 
     override suspend fun saveApiKey(apiKey: String) {
