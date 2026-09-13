@@ -22,6 +22,8 @@ fun AdminScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
     val isRunning by viewModel.isEngineRunning.collectAsState()
     val isApiConnected by viewModel.isApiConnected.collectAsState()
+    var telegramBotToken by remember { mutableStateOf(com.example.network.TelegramConfigStore.getBotToken()) }
+    var telegramChatId by remember { mutableStateOf(com.example.network.TelegramConfigStore.getAdminChatId()) }
 
     Column(
         modifier = Modifier
@@ -115,5 +117,58 @@ fun AdminScreen(viewModel: MainViewModel) {
             color = Color.Gray,
             fontSize = 11.sp
         )
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+            border = BorderStroke(1.dp, Color(0xFF30363D)),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("تنظیمات ربات تلگرام (اطلاع‌رسانی ادمین)", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text(
+                    "توکن ربات و شناسه چت ادمین را اینجا وارد کن — این اطلاعات فقط روی همین گوشی و به‌صورت رمزنگاری‌شده ذخیره می‌شود.",
+                    color = Color.Gray,
+                    fontSize = 11.sp
+                )
+                OutlinedTextField(
+                    value = telegramBotToken,
+                    onValueChange = { telegramBotToken = it },
+                    label = { Text("Bot Token") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color(0xFF38BDF8),
+                        unfocusedBorderColor = Color(0xFF30363D)
+                    )
+                )
+                OutlinedTextField(
+                    value = telegramChatId,
+                    onValueChange = { telegramChatId = it },
+                    label = { Text("Admin Chat ID") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color(0xFF38BDF8),
+                        unfocusedBorderColor = Color(0xFF30363D)
+                    )
+                )
+                Button(
+                    onClick = {
+                        com.example.network.TelegramConfigStore.saveConfig(telegramBotToken, telegramChatId)
+                        Toast.makeText(context, "تنظیمات تلگرام ذخیره شد", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676)),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("ذخیره تنظیمات تلگرام", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            }
+        }
     }
 }
