@@ -10,6 +10,7 @@ import com.example.core.result.AppResult
 import com.example.domain.model.OrderSide
 import com.example.domain.usecase.order.PlaceOrderUseCase
 import com.example.domain.usecase.account.FetchBalanceUseCase
+import com.example.domain.usecase.order.ClosePositionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -64,9 +65,11 @@ data class AuditLog(
 )
 
 @HiltViewModel
+@HiltViewModel
 class MainViewModel @Inject constructor(
     private val placeOrderUseCase: PlaceOrderUseCase,
-    private val fetchBalanceUseCase: FetchBalanceUseCase
+    private val fetchBalanceUseCase: FetchBalanceUseCase,
+    private val closePositionUseCase: ClosePositionUseCase
 ) : ViewModel() {
     private val _currentTab = MutableStateFlow(AppTab.TRADE)
     val currentTab: StateFlow<AppTab> = _currentTab.asStateFlow()
@@ -399,66 +402,51 @@ class MainViewModel @Inject constructor(
             val order = _trades.value.find { it.timestamp == orderTimestamp } ?: return@launch
             if (order.status != TradeStatus.OPEN) return@launch
 
-            _lastEngineLog.value = "در حال دریافت قیمت واقعی بازار برای بستن پوزیشن..."
-
-            val priceResult = WallexLiveClient.fetchMarketPrice(order.symbol)
-            val currentPrice = priceResult.getOrNull()
-            if (currentPrice == null || currentPrice <= 0.0) {
-                val err = "دریافت قیمت واقعی بازار ناموفق بود. پوزیشن بسته نشد."
-                _lastEngineLog.value = err
-                addAuditLog("CLOSE_ERROR", err, false)
-                return@launch
-            }
+            _lastEngineLog.value = "در حال بستن پوزیشن با قیمت واقعی بازار..."
 
             val tradeAmountUsdt = order.amountTmn / _tomanRate.value
             val quantity = tradeAmountUsdt / order.entryPrice
+            val domainSide = if (order.side.equals("BUY", ignoreCase = true)) OrderSide.BUY else OrderSide.SELL
 
-            var exitOrderId = "LOCAL_EXEC"
-            val currentApiKey = _wallexApiKey.value
-            if (currentApiKey.isNotBlank()) {
-                val closingSide = if (order.side.equals("BUY", ignoreCase = true)) "SELL" else "BUY"
-                val orderResult = WallexLiveClient.executeOrder(
-                    apiKey = currentApiKey,
-                    symbol = order.symbol,
-                    side = closingSide,
-                    quantity = quantity,
-                    price = currentPrice
-                )
-                if (orderResult.isSuccess) {
-                    exitOrderId = orderResult.getOrDefault("SUCCESS")
-                } else {
-                    val errMsg = orderResult.exceptionOrNull()?.message ?: "خطای ناشناخته صرافی"
-                    _lastEngineLog.value = "هشدار: بستن سفارش در صرافی ناموفق بود: $errMsg"
-                    addAuditLog("CLOSE_ORDER_FAIL", errMsg, false)
-                    return@launch
+            val domainOrder = com.example.domain.model.TradeOrder(
+                id = order.timestamp.toString(),
+                symbol = order.symbol,
+                side = domainSide,
+                entryPrice = order.entryPrice,
+                quantity = quantity,
+                status = com.example.domain.model.TradeStatus.OPEN,
+                openedAt = order.entryTimestamp
+            )
+
+            when (val result = closePositionUseCase(domainOrder)) {
+                is AppResult.Success -> {
+                    val closed = result.data
+                    val payoutUsdt = tradeAmountUsdt + closed.profitUsdt
+
+                    _usdtBalance.value += payoutUsdt
+                    _trades.value = _trades.value.map {
+                        if (it.timestamp == orderTimestamp) {
+                            it.copy(
+                                status = TradeStatus.CLOSED,
+                                exitPrice = closed.updatedOrder.exitPrice ?: it.exitPrice,
+                                profitUsdt = closed.profitUsdt,
+                                pnlPercent = closed.pnlPercent,
+                                exitTimestamp = System.currentTimeMillis(),
+                                closeReason = reason
+                            )
+                        } else it
+                    }
+
+                    val sign = if (closed.profitUsdt >= 0) "+" else ""
+                    val resText = "معامله ${order.symbol} بسته شد. سود/زیان واقعی: ${sign}${String.format(Locale.US, "%.2f", closed.profitUsdt)} USDT (${String.format(Locale.US, "%.2f", closed.pnlPercent)}%)"
+                    _lastEngineLog.value = resText
+                    addAuditLog("ORDER_CLOSE", resText, closed.profitUsdt >= 0)
+                }
+                is AppResult.Error -> {
+                    _lastEngineLog.value = "خطا در بستن پوزیشن: ${result.message}"
+                    addAuditLog("CLOSE_ERROR", result.message, false)
                 }
             }
-
-            val entryValue = order.entryPrice * quantity
-            val exitValue = currentPrice * quantity
-            val isBuy = order.side.equals("BUY", ignoreCase = true)
-            val diffUsdt = if (isBuy) exitValue - entryValue else entryValue - exitValue
-            val pnlPercent = (diffUsdt / entryValue) * 100.0
-            val payoutUsdt = tradeAmountUsdt + diffUsdt
-
-            _usdtBalance.value += payoutUsdt
-            _trades.value = _trades.value.map {
-                if (it.timestamp == orderTimestamp) {
-                    it.copy(
-                        status = TradeStatus.CLOSED,
-                        exitPrice = currentPrice,
-                        profitUsdt = diffUsdt,
-                        pnlPercent = pnlPercent,
-                        exitTimestamp = System.currentTimeMillis(),
-                        closeReason = "$reason ($exitOrderId)"
-                    )
-                } else it
-            }
-
-            val sign = if (diffUsdt >= 0) "+" else ""
-            val resText = "معامله ${order.symbol} بسته شد. سود/زیان واقعی: ${sign}${String.format(Locale.US, "%.2f", diffUsdt)} USDT (${String.format(Locale.US, "%.2f", pnlPercent)}%)"
-            _lastEngineLog.value = resText
-            addAuditLog("ORDER_CLOSE", resText, diffUsdt >= 0)
         }
     }
 

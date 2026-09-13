@@ -20,9 +20,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.network.SubscriptionStore
+import com.example.network.TelegramNotifier
 import com.example.ui.theme.DarkNavyBg
 import com.example.ui.viewmodel.MainViewModel
+import com.example.util.ActivationCodeUtil
 import java.text.DecimalFormat
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlinx.coroutines.launch
 
 enum class PlanDuration(val months: Int, val titleFa: String, val discountFactor: Double) {
     ONE_MONTH(1, "۱ ماهه", 1.0),
@@ -42,9 +49,17 @@ data class SubscriptionPlan(
     val hasDurationSelection: Boolean = false
 )
 
+data class PendingPayment(
+    val plan: SubscriptionPlan,
+    val priceUsdt: Int,
+    val priceToman: Long,
+    val months: Int
+)
+
 @Composable
 fun SubscriptionsScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val tomanRate by viewModel.tomanRate.collectAsState()
     val formatter = remember { DecimalFormat("#,###") }
 
@@ -58,12 +73,21 @@ fun SubscriptionsScreen(viewModel: MainViewModel) {
     var goldDuration by remember { mutableStateOf(PlanDuration.ONE_MONTH) }
     var vipDuration by remember { mutableStateOf(PlanDuration.ONE_MONTH) }
 
-    var selectedPlanForPayment by remember { mutableStateOf<Triple<SubscriptionPlan, Int, Long>?>(null) }
+    var selectedPlanForPayment by remember { mutableStateOf<PendingPayment?>(null) }
+    var refreshTrigger by remember { mutableStateOf(0) }
 
-    // دیالوگ اتصال به درگاه پرداخت / والت
+    val activePlanId = remember(refreshTrigger) { SubscriptionStore.getActivePlan() }
+    val pendingPlanId = remember(refreshTrigger) { SubscriptionStore.getPendingPlan() }
+    val pendingTracking = remember(refreshTrigger) { SubscriptionStore.getPendingTracking() }
+    var activationInput by remember { mutableStateOf("") }
+
+    // دیالوگ اتصال به درگاه پرداخت / والت / کارت به کارت
     if (selectedPlanForPayment != null) {
-        val (plan, usdt, toman) = selectedPlanForPayment!!
+        val payment = selectedPlanForPayment!!
+        var showCardToCard by remember { mutableStateOf(false) }
+        var trackingCodeInput by remember { mutableStateOf("") }
         val usdtWalletAddress = "TYDzsxdjhRoVNipmYnPWv5vWWBc5zGo6bp" // ولت دریافت تتر (TRC20)
+        val cardNumberPlaceholder = "XXXX-XXXX-XXXX-XXXX (به نام: ---)" // TODO: شماره کارت واقعی جایگزین شود
 
         AlertDialog(
             onDismissRequest = { selectedPlanForPayment = null },
@@ -71,39 +95,109 @@ fun SubscriptionsScreen(viewModel: MainViewModel) {
             title = { Text("پرداخت و فعال‌سازی اشتراک", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("پلن انتخابی: ${plan.titleFa}", color = plan.badgeColor, fontWeight = FontWeight.Bold)
-                    Text("مبلغ قابل پرداخت: $usdt تتر (${formatter.format(toman)} تومان)", color = Color.White, fontSize = 13.sp)
+                    Text("پلن انتخابی: ${payment.plan.titleFa}", color = payment.plan.badgeColor, fontWeight = FontWeight.Bold)
+                    Text("مبلغ قابل پرداخت: ${payment.priceUsdt} تتر (${formatter.format(payment.priceToman)} تومان)", color = Color.White, fontSize = 13.sp)
                     HorizontalDivider(color = Color(0xFF30363D))
-                    
-                    Text("روش پرداخت را انتخاب کنید:", color = Color.Gray, fontSize = 12.sp)
-                    
-                    Button(
-                        onClick = {
-                            val zarinpalUrl = "https://zarinp.al/hmhammer?amount=$toman"
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(zarinpalUrl))
-                            context.startActivity(intent)
-                            selectedPlanForPayment = null
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF238636)),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("پرداخت ریالی (درگاه آنلاین بانکی)", color = Color.White, fontSize = 12.sp)
-                    }
 
-                    OutlinedButton(
-                        onClick = {
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            val clip = ClipData.newPlainText("USDT Address", usdtWalletAddress)
-                            clipboard.setPrimaryClip(clip)
-                            Toast.makeText(context, "آدرس کیف‌پول USDT TRC20 کپی شد.", Toast.LENGTH_LONG).show()
-                            selectedPlanForPayment = null
-                        },
-                        border = BorderStroke(1.dp, Color(0xFF38BDF8)),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("کپی آدرس کیف‌پول تتر (USDT TRC20)", color = Color(0xFF38BDF8), fontSize = 12.sp)
+                    if (!showCardToCard) {
+                        Text("روش پرداخت را انتخاب کنید:", color = Color.Gray, fontSize = 12.sp)
+
+                        Button(
+                            onClick = {
+                                val zarinpalUrl = "https://zarinp.al/hmhammer?amount=${payment.priceToman}"
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(zarinpalUrl))
+                                context.startActivity(intent)
+                                selectedPlanForPayment = null
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF238636)),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("پرداخت ریالی (درگاه آنلاین بانکی)", color = Color.White, fontSize = 12.sp)
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                val clip = ClipData.newPlainText("USDT Address", usdtWalletAddress)
+                                clipboard.setPrimaryClip(clip)
+                                Toast.makeText(context, "آدرس کیف‌پول USDT TRC20 کپی شد.", Toast.LENGTH_LONG).show()
+                                selectedPlanForPayment = null
+                            },
+                            border = BorderStroke(1.dp, Color(0xFF38BDF8)),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("کپی آدرس کیف‌پول تتر (USDT TRC20)", color = Color(0xFF38BDF8), fontSize = 12.sp)
+                        }
+
+                        OutlinedButton(
+                            onClick = { showCardToCard = true },
+                            border = BorderStroke(1.dp, Color(0xFFFFB703)),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("پرداخت کارت به کارت (ثبت دستی)", color = Color(0xFFFFB703), fontSize = 12.sp)
+                        }
+                    } else {
+                        Text("مبلغ را به شماره کارت زیر واریز کنید:", color = Color.Gray, fontSize = 12.sp)
+                        Surface(
+                            color = Color(0xFF0D1117),
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, Color(0xFF30363D)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                cardNumberPlaceholder,
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(10.dp)
+                            )
+                        }
+                        OutlinedTextField(
+                            value = trackingCodeInput,
+                            onValueChange = { trackingCodeInput = it },
+                            label = { Text("کد پیگیری تراکنش") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedBorderColor = Color(0xFFFFB703),
+                                unfocusedBorderColor = Color(0xFF30363D)
+                            )
+                        )
+                        Text(
+                            "بعد از ثبت، درخواست شما برای بررسی ارسال می‌شود و کد فعال‌سازی برایتان ارسال خواهد شد.",
+                            color = Color.Gray,
+                            fontSize = 10.sp
+                        )
+                        Button(
+                            onClick = {
+                                if (trackingCodeInput.isBlank()) {
+                                    Toast.makeText(context, "لطفاً کد پیگیری تراکنش را وارد کنید", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    SubscriptionStore.savePendingClaim(payment.plan.id, trackingCodeInput, payment.months)
+                                    coroutineScope.launch {
+                                        TelegramNotifier.sendNotification(
+                                            "🔔 درخواست پرداخت کارت به کارت جدید\n" +
+                                                "پلن: ${payment.plan.titleFa}\n" +
+                                                "مبلغ: ${formatter.format(payment.priceToman)} تومان\n" +
+                                                "کد پیگیری: $trackingCodeInput"
+                                        )
+                                    }
+                                    Toast.makeText(context, "درخواست ثبت شد. منتظر کد فعال‌سازی بمانید.", Toast.LENGTH_LONG).show()
+                                    selectedPlanForPayment = null
+                                    refreshTrigger++
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB703)),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("ثبت درخواست پرداخت", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
                     }
                 }
             },
@@ -133,6 +227,79 @@ fun SubscriptionsScreen(viewModel: MainViewModel) {
             ) {
                 Text("اشتراک‌های معاملاتی الگوریتم چکش", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 Text("نرخ روز: ${formatter.format(tomanRate.toInt())} تومان", color = Color(0xFF38BDF8), fontSize = 11.sp)
+            }
+        }
+
+        // وضعیت اشتراک فعلی / درخواست در انتظار تایید
+        if (activePlanId != null) {
+            val expiryDate = remember(activePlanId) {
+                SimpleDateFormat("yyyy/MM/dd", Locale.US).format(Date(SubscriptionStore.getActiveExpiry()))
+            }
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF102A1A)),
+                border = BorderStroke(1.dp, Color(0xFF00E676)),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        "اشتراک فعال: ${plans.find { it.id == activePlanId }?.titleFa ?: activePlanId}",
+                        color = Color(0xFF00E676),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                    Text("معتبر تا تاریخ: $expiryDate", color = Color.LightGray, fontSize = 11.sp)
+                }
+            }
+        } else if (pendingPlanId.isNotBlank()) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2410)),
+                border = BorderStroke(1.dp, Color(0xFFFFB703)),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)
+            ) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "درخواست شما برای پلن ${plans.find { it.id == pendingPlanId }?.titleFa ?: pendingPlanId} در انتظار تایید است",
+                        color = Color(0xFFFFB703),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
+                    Text("کد پیگیری ثبت‌شده: $pendingTracking", color = Color.Gray, fontSize = 11.sp)
+                    OutlinedTextField(
+                        value = activationInput,
+                        onValueChange = { activationInput = it },
+                        label = { Text("کد فعال‌سازی") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = Color(0xFFFFB703),
+                            unfocusedBorderColor = Color(0xFF30363D)
+                        )
+                    )
+                    Button(
+                        onClick = {
+                            val expected = ActivationCodeUtil.generate(pendingTracking, pendingPlanId)
+                            if (activationInput.trim().equals(expected, ignoreCase = true)) {
+                                val months = SubscriptionStore.getPendingMonths()
+                                val expiry = System.currentTimeMillis() + (months.toLong() * 30L * 24 * 60 * 60 * 1000)
+                                SubscriptionStore.activatePlan(pendingPlanId, expiry)
+                                Toast.makeText(context, "اشتراک با موفقیت فعال شد!", Toast.LENGTH_LONG).show()
+                                activationInput = ""
+                                refreshTrigger++
+                            } else {
+                                Toast.makeText(context, "کد فعال‌سازی نادرست است", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB703)),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("فعال‌سازی با کد", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
             }
         }
 
@@ -241,7 +408,7 @@ fun SubscriptionsScreen(viewModel: MainViewModel) {
 
                             Button(
                                 onClick = {
-                                    selectedPlanForPayment = Triple(plan, finalPriceUsdt, finalPriceToman)
+                                    selectedPlanForPayment = PendingPayment(plan, finalPriceUsdt, finalPriceToman, selectedDuration.months)
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = plan.badgeColor),
                                 shape = RoundedCornerShape(8.dp)
