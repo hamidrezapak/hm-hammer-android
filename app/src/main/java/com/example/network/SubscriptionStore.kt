@@ -12,6 +12,7 @@ object SubscriptionStore {
     private const val KEY_ACTIVE_EXPIRY = "active_expiry_millis"
     private const val KEY_PENDING_PLAN = "pending_plan_id"
     private const val KEY_PENDING_TRACKING = "pending_tracking_code"
+    private const val KEY_PENDING_MONTHS = "pending_months"
     private const val TAG = "SubscriptionStore"
 
     @Volatile private var appContext: Context? = null
@@ -40,11 +41,12 @@ object SubscriptionStore {
         }
     }
 
-    fun savePendingClaim(planId: String, trackingCode: String) {
+    fun savePendingClaim(planId: String, trackingCode: String, months: Int) {
         try {
             getPrefs()?.edit()
                 ?.putString(KEY_PENDING_PLAN, planId)
                 ?.putString(KEY_PENDING_TRACKING, trackingCode.trim())
+            ?.putInt(KEY_PENDING_MONTHS, months)
                 ?.apply()
         } catch (e: Exception) {
             Log.e(TAG, "خطا در ذخیره درخواست: ${e.message}")
@@ -53,6 +55,7 @@ object SubscriptionStore {
 
     fun getPendingPlan(): String = try { getPrefs()?.getString(KEY_PENDING_PLAN, "") ?: "" } catch (e: Exception) { "" }
     fun getPendingTracking(): String = try { getPrefs()?.getString(KEY_PENDING_TRACKING, "") ?: "" } catch (e: Exception) { "" }
+    fun getPendingMonths(): Int = try { getPrefs()?.getInt(KEY_PENDING_MONTHS, 1) ?: 1 } catch (e: Exception) { 1 }
 
     fun activatePlan(planId: String, expiryMillis: Long) {
         try {
@@ -61,6 +64,7 @@ object SubscriptionStore {
                 ?.putLong(KEY_ACTIVE_EXPIRY, expiryMillis)
                 ?.remove(KEY_PENDING_PLAN)
                 ?.remove(KEY_PENDING_TRACKING)
+                ?.remove(KEY_PENDING_MONTHS)
                 ?.apply()
         } catch (e: Exception) {
             Log.e(TAG, "خطا در فعال‌سازی پلن: ${e.message}")
