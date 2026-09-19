@@ -21,3 +21,4 @@ final_apk/
 final_build/
 *.bak
 *.bak2
+tracking_codes.json
