@@ -24,6 +24,8 @@ fun AdminScreen(viewModel: MainViewModel) {
     val isApiConnected by viewModel.isApiConnected.collectAsState()
     var telegramBotToken by remember { mutableStateOf(com.example.network.TelegramConfigStore.getBotToken()) }
     var telegramChatId by remember { mutableStateOf(com.example.network.TelegramConfigStore.getAdminChatId()) }
+    var pinHasSet by remember { mutableStateOf(com.example.network.PinLockStore.hasPinSet()) }
+    var newPinInput by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -117,6 +119,64 @@ fun AdminScreen(viewModel: MainViewModel) {
             color = Color.Gray,
             fontSize = 11.sp
         )
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+            border = BorderStroke(1.dp, Color(0xFF30363D)),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("قفل امنیتی ورود به اپ (PIN)", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                if (pinHasSet) {
+                    Text("قفل در حال حاضر فعال است ✅", color = Color(0xFF00E676), fontSize = 12.sp)
+                    Button(
+                        onClick = {
+                            com.example.network.PinLockStore.clearPin()
+                            pinHasSet = false
+                            Toast.makeText(context, "قفل غیرفعال شد", Toast.LENGTH_SHORT).show()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD50000)),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("غیرفعال‌سازی قفل", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                } else {
+                    Text("برای فعال‌سازی، یک کد PIN بین ۴ تا ۸ رقم وارد کنید.", color = Color.Gray, fontSize = 11.sp)
+                    OutlinedTextField(
+                        value = newPinInput,
+                        onValueChange = { if (it.length <= 8) newPinInput = it },
+                        label = { Text("کد PIN جدید") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = Color(0xFF00E676),
+                            unfocusedBorderColor = Color(0xFF30363D)
+                        )
+                    )
+                    Button(
+                        onClick = {
+                            if (newPinInput.length < 4) {
+                                Toast.makeText(context, "کد PIN باید حداقل ۴ رقم باشد", Toast.LENGTH_SHORT).show()
+                            } else {
+                                com.example.network.PinLockStore.savePin(newPinInput)
+                                pinHasSet = true
+                                newPinInput = ""
+                                Toast.makeText(context, "قفل فعال شد", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676)),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("فعال‌سازی قفل", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
+            }
+        }
 
         Card(
             colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),

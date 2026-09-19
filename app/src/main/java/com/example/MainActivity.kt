@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
         com.example.network.SecureKeyStore.init(applicationContext)
         com.example.network.TelegramConfigStore.init(applicationContext)
         com.example.network.SubscriptionStore.init(applicationContext)
+        com.example.network.PinLockStore.init(applicationContext)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -71,7 +72,12 @@ class MainActivity : ComponentActivity() {
                     primary = Color(0xFF38BDF8)
                 )
             ) {
-                MainAppScreen(viewModel = viewModel)
+                var isUnlocked by remember { mutableStateOf(!com.example.network.PinLockStore.hasPinSet()) }
+                if (isUnlocked) {
+                    MainAppScreen(viewModel = viewModel)
+                } else {
+                    PinEntryScreen(onUnlocked = { isUnlocked = true })
+                }
             }
         }
     }
