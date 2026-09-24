@@ -36,7 +36,7 @@ class TradingService : Service() {
         val paper = intent?.getBooleanExtra("PAPER", true) ?: true
         if (!isRunning && paper) {
             isRunning = true
-            serviceScope.launch { PaperTrader(symbol, onStatus = { updateNotification(it) }).run() }
+            serviceScope.launch { PaperTrader(symbol, onStatus = { updateNotification(it); statusFlow.value = it }).run() }
         } else if (!isRunning && apiKey.isNotBlank()) {
             isRunning = true
             startTradingLoop(apiKey, symbol)
@@ -264,6 +264,7 @@ class TradingService : Service() {
     }
 
     companion object {
+        val statusFlow = kotlinx.coroutines.flow.MutableStateFlow("")
         private const val CHANNEL_ID = "trading_service_channel"
         private const val NOTIFICATION_ID = 1001
     }

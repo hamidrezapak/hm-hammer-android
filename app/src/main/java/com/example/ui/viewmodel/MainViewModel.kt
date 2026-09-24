@@ -140,6 +140,9 @@ class MainViewModel @Inject constructor(
         }
         addAuditLog("SYSTEM", "هسته معاملاتی HM HAMMER بارگذاری شد. موجودی واقعی منتظر تایید API صرافی.", true)
         recalculateLevels(64500.0, "BUY")
+        viewModelScope.launch {
+            com.example.service.TradingService.statusFlow.collect { if (it.isNotBlank()) _lastEngineLog.value = it }
+        }
     }
 
     fun setTab(tab: AppTab) { _currentTab.value = tab }
@@ -280,7 +283,7 @@ class MainViewModel @Inject constructor(
                 }
             }
             _isEngineRunning.value = true
-            _lastEngineLog.value = "موتور واقعی ترید فعال شد (BTCUSDT)"
+            _lastEngineLog.value = "موتور Paper (شبیه‌سازی) فعال شد (BTCUSDT)"
         }
     }
 
