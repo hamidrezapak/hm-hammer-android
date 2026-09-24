@@ -36,7 +36,7 @@ class TradingService : Service() {
         val paper = intent?.getBooleanExtra("PAPER", true) ?: true
         if (!isRunning && paper) {
             isRunning = true
-            serviceScope.launch { PaperTrader(symbol) { updateNotification(it) }.run() }
+            serviceScope.launch { PaperTrader(symbol, onStatus = { updateNotification(it) }).run() }
         } else if (!isRunning && apiKey.isNotBlank()) {
             isRunning = true
             startTradingLoop(apiKey, symbol)
