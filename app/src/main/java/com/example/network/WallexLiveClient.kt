@@ -194,7 +194,7 @@ object WallexLiveClient {
                 )
             }
 
-            val url = URL("$BASE_URL/orders")
+            val url = URL("$BASE_URL/account/orders")
             conn = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 setRequestProperty("X-API-Key", apiKey.trim())
@@ -205,7 +205,9 @@ object WallexLiveClient {
                 readTimeout = 8000
             }
 
+            val clientId = "hm-" + java.util.UUID.randomUUID().toString()
             val payload = JSONObject().apply {
+                put("client_id", clientId)
                 put("symbol", symbol.uppercase(Locale.ROOT))
                 put("type", "LIMIT")
                 put("side", side.uppercase(Locale.ROOT))
@@ -222,7 +224,7 @@ object WallexLiveClient {
             if (code in 200..299) {
                 val json = JSONObject(res)
                 val result = json.getJSONObject("result")
-                val orderId = result.optString("order_id", result.optString("id", ""))
+                val orderId = result.optString("clientOrderId", clientId)
                 if (orderId.isBlank()) Result.failure(WallexException.OrderRejectedException("شناسه سفارش در پاسخ نبود؛ سفارش‌های باز صرافی را دستی چک کنید")) else Result.success(orderId)
             } else {
                 if (code == 401 || code == 403) Result.failure(WallexException.AuthException(res)) else Result.failure(WallexException.OrderRejectedException("HTTP $code: $res"))
@@ -237,7 +239,7 @@ object WallexLiveClient {
     suspend fun checkOrderStatus(apiKey: String, orderId: String): Result<String> = withContext(Dispatchers.IO) {
         var conn: HttpURLConnection? = null
         try {
-            val url = URL("$BASE_URL/orders/$orderId")
+            val url = URL("$BASE_URL/account/orders/$orderId")
             conn = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
                 setRequestProperty("X-API-Key", apiKey.trim())
@@ -252,7 +254,15 @@ object WallexLiveClient {
 
             if (code in 200..299) {
                 val json = JSONObject(res)
-                val status = json.optJSONObject("result")?.optString("status", "UNKNOWN") ?: "UNKNOWN"
+                val r = json.optJSONObject("result")
+                val orig = r?.optString("origQty", "0")?.toDoubleOrNull() ?: 0.0
+                val exec = r?.optString("executedQty", "0")?.toDoubleOrNull() ?: 0.0
+                val active = r?.optBoolean("active", true) ?: true
+                val status = when {
+                    orig > 0.0 && exec >= orig * 0.999 -> "FILLED"
+                    !active && exec <= 0.0 -> "CANCELED"
+                    else -> r?.optString("status", "UNKNOWN") ?: "UNKNOWN"
+                }
                 Result.success(status.uppercase(Locale.ROOT))
             } else {
                 if (code == 401 || code == 403) Result.failure(WallexException.AuthException(res)) else Result.failure(WallexException.NetworkException("HTTP $code: $res"))
@@ -267,7 +277,7 @@ object WallexLiveClient {
     suspend fun cancelOrder(apiKey: String, orderId: String): Result<Boolean> = withContext(Dispatchers.IO) {
         var conn: HttpURLConnection? = null
         try {
-            val url = URL("$BASE_URL/orders/$orderId")
+            val url = URL("$BASE_URL/account/orders/$orderId")
             conn = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "DELETE"
                 setRequestProperty("X-API-Key", apiKey.trim())
