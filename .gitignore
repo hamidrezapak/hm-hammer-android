@@ -22,3 +22,12 @@ final_build/
 *.bak
 *.bak2
 tracking_codes.json
+all_code.txt
+project_all_code.txt
+part*.txt
+*.bak*
+*.bak_phase1
+fix_*.py
+local.properties
+*.jks
+*.keystore

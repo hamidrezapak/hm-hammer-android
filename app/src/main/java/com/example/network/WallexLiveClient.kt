@@ -56,13 +56,15 @@ object WallexLiveClient {
     fun getPricePrecision(symbol: String): Int = fallbackPricePrecision(symbol)
 
     fun formatQuantity(symbol: String, qty: Double): Double {
-        val factor = Math.pow(10.0, getStepSize(symbol).toDouble())
-        return Math.floor(qty * factor) / factor
+        return java.math.BigDecimal(qty.toString())
+            .setScale(getStepSize(symbol), java.math.RoundingMode.DOWN)
+            .toDouble()
     }
 
     fun formatPrice(symbol: String, price: Double): Double {
-        val factor = Math.pow(10.0, getPricePrecision(symbol).toDouble())
-        return Math.round(price * factor) / factor
+        return java.math.BigDecimal(price.toString())
+            .setScale(getPricePrecision(symbol), java.math.RoundingMode.HALF_UP)
+            .toDouble()
     }
 
     suspend fun fetchSymbolInfo(symbol: String): SymbolInfo = withContext(Dispatchers.IO) {
@@ -220,10 +222,10 @@ object WallexLiveClient {
             if (code in 200..299) {
                 val json = JSONObject(res)
                 val result = json.getJSONObject("result")
-                val orderId = result.optString("order_id", result.optString("id", "OK"))
-                Result.success(orderId)
+                val orderId = result.optString("order_id", result.optString("id", ""))
+                if (orderId.isBlank()) Result.failure(WallexException.OrderRejectedException("شناسه سفارش در پاسخ نبود؛ سفارش‌های باز صرافی را دستی چک کنید")) else Result.success(orderId)
             } else {
-                Result.failure(WallexException.OrderRejectedException("HTTP $code: $res"))
+                if (code == 401 || code == 403) Result.failure(WallexException.AuthException(res)) else Result.failure(WallexException.OrderRejectedException("HTTP $code: $res"))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -253,7 +255,7 @@ object WallexLiveClient {
                 val status = json.optJSONObject("result")?.optString("status", "UNKNOWN") ?: "UNKNOWN"
                 Result.success(status.uppercase(Locale.ROOT))
             } else {
-                Result.failure(WallexException.NetworkException("HTTP $code: $res"))
+                if (code == 401 || code == 403) Result.failure(WallexException.AuthException(res)) else Result.failure(WallexException.NetworkException("HTTP $code: $res"))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -275,7 +277,7 @@ object WallexLiveClient {
                 readTimeout = 7000
             }
             val code = conn.responseCode
-            Result.success(code in 200..299)
+            if (code == 401 || code == 403) Result.failure(WallexException.AuthException("cancel")) else Result.success(code in 200..299)
         } catch (e: Exception) {
             Result.failure(e)
         } finally {

@@ -41,7 +41,7 @@ class TradingService : Service() {
     }
 
     private fun getPositionFile(): File {
-        val dir = File("/sdcard/Android/data/com.aistudio.hmhammer.pro7x9/files")
+        val dir = filesDir
         if (!dir.exists()) dir.mkdirs()
         return File(dir, "active_position.json")
     }
@@ -71,10 +71,13 @@ class TradingService : Service() {
     }
 
     private fun extractBaseAsset(symbol: String): String {
-        return symbol.uppercase(Locale.ROOT)
-            .removeSuffix("USDT")
-            .removeSuffix("TMN")
-            .removeSuffix("BTC")
+        val s = symbol.uppercase(Locale.ROOT)
+        return when {
+            s.endsWith("USDT") -> s.removeSuffix("USDT")
+            s.endsWith("TMN") -> s.removeSuffix("TMN")
+            s.endsWith("BTC") && s != "BTC" -> s.removeSuffix("BTC")
+            else -> s
+        }
     }
 
     private fun startTradingLoop(apiKey: String, symbol: String) {
@@ -116,11 +119,19 @@ class TradingService : Service() {
                                             savePositionState(true, buyPrice)
                                             updateNotification("خرید کامل شد در قیمت $buyPrice")
                                         } else {
-                                            WallexLiveClient.cancelOrder(apiKey, orderId)
-                                            updateNotification("سفارش خرید به دلیل عدم مچ لغو شد.")
+                                            val filledLate = cancelAndRecheck(apiKey, orderId)
+                                            val baseBal = WallexLiveClient.fetchBalance(apiKey, baseAsset).getOrDefault(0.0)
+                                            if (filledLate || baseBal * buyPrice >= 1.0) {
+                                                holdingAsset = true
+                                                currentPositionPrice = buyPrice
+                                                savePositionState(true, buyPrice)
+                                                updateNotification("خرید دیرهنگام یا جزئی شناسایی شد")
+                                            } else {
+                                                updateNotification("سفارش خرید به دلیل عدم مچ لغو شد.")
+                                            }
                                         }
                                     }.onFailure { err ->
-                                        updateNotification("رد سفارش خرید: ${err.message}")
+                                        if (err is WallexException.AuthException) handleError(err) else updateNotification("رد سفارش خرید: ${err.message}")
                                     }
                                 }
                             }
@@ -148,11 +159,18 @@ class TradingService : Service() {
                                             val sign = if (deltaPct >= 0) "+" else ""
                                             updateNotification("فروش موفق (${sign}${String.format(Locale.US, "%.2f", deltaPct)}%)")
                                         } else {
-                                            WallexLiveClient.cancelOrder(apiKey, orderId)
-                                            updateNotification("سفارش فروش کامل نشد و لغو گردید.")
+                                            val lateFill = cancelAndRecheck(apiKey, orderId)
+                                            if (lateFill) {
+                                                holdingAsset = false
+                                                currentPositionPrice = 0.0
+                                                savePositionState(false, 0.0)
+                                                updateNotification("فروش دیرهنگام اجرا شد")
+                                            } else {
+                                                updateNotification("سفارش فروش کامل نشد و لغو گردید.")
+                                            }
                                         }
                                     }.onFailure { err ->
-                                        updateNotification("خطا در فروش: ${err.message}")
+                                        if (err is WallexException.AuthException) handleError(err) else updateNotification("خطا در فروش: ${err.message}")
                                     }
                                 }
                             }.onFailure { err ->
@@ -195,6 +213,13 @@ class TradingService : Service() {
             }
         }
         return false
+    }
+
+    private suspend fun cancelAndRecheck(apiKey: String, orderId: String): Boolean {
+        WallexLiveClient.cancelOrder(apiKey, orderId)
+        delay(1500)
+        val st = WallexLiveClient.checkOrderStatus(apiKey, orderId).getOrNull().orEmpty()
+        return st == "FILLED" || st == "DONE" || st == "CLOSED"
     }
 
     private fun handleError(throwable: Throwable) {

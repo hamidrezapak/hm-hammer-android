@@ -355,7 +355,8 @@ class MainViewModel @Inject constructor(
                 }
                 is AppResult.Error -> {
                     addAuditLog("EXCHANGE_ORDER_FAIL", orderResult.message, false)
-                    _lastEngineLog.value = "هشدار صرافی: ${orderResult.message}"
+                    _lastEngineLog.value = "سفارش ثبت نشد: ${orderResult.message}"
+                    return@launch
                 }
             }
 
