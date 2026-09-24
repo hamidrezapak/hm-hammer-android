@@ -31,3 +31,9 @@ fix_*.py
 local.properties
 *.jks
 *.keystore
+*.png
+errors.txt
+final_apk/
+final_build/
+latest_apk/
+test_execution.log
