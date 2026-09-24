@@ -33,7 +33,11 @@ class TradingService : Service() {
         val apiKey = intent?.getStringExtra("API_KEY")?.trim() ?: ""
         val symbol = intent?.getStringExtra("SYMBOL")?.trim() ?: "BTCUSDT"
 
-        if (!isRunning && apiKey.isNotBlank()) {
+        val paper = intent?.getBooleanExtra("PAPER", true) ?: true
+        if (!isRunning && paper) {
+            isRunning = true
+            serviceScope.launch { PaperTrader(symbol) { updateNotification(it) }.run() }
+        } else if (!isRunning && apiKey.isNotBlank()) {
             isRunning = true
             startTradingLoop(apiKey, symbol)
         }
