@@ -143,6 +143,16 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             com.example.service.TradingService.statusFlow.collect { if (it.isNotBlank()) _lastEngineLog.value = it }
         }
+        viewModelScope.launch {
+            while (true) {
+                val btcTmn = com.example.network.WallexLiveClient.fetchMarketPrice("BTCTMN").getOrNull()
+                val btcUsdt = com.example.network.WallexLiveClient.fetchMarketPrice("BTCUSDT").getOrNull()
+                if (btcTmn != null && btcUsdt != null && btcUsdt > 0.0) {
+                    _tomanRate.value = btcTmn / btcUsdt
+                }
+                delay(60_000L)
+            }
+        }
     }
 
     fun setTab(tab: AppTab) { _currentTab.value = tab }
