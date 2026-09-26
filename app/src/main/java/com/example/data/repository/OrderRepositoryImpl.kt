@@ -48,15 +48,20 @@ class OrderRepositoryImpl @Inject constructor(
                 )
             }
 
+            val clientId = "hm-" + java.util.UUID.randomUUID().toString()
             val body = WallexOrderRequest(
                 symbol = upper,
                 side = side.name,
                 type = "LIMIT",
                 price = String.format(Locale.US, "%.${precision}f", cleanPrice),
-                quantity = String.format(Locale.US, "%.${step}f", cleanQty)
+                quantity = String.format(Locale.US, "%.${step}f", cleanQty),
+                clientId = clientId
             )
             val response = api.placeOrder(apiKey, body)
-            val orderId = response.result.orderId ?: response.result.id ?: "OK"
+            val orderId = response.result.clientOrderId ?: response.result.orderId ?: response.result.id
+            if (orderId.isNullOrBlank()) {
+                return AppResult.Error("شناسه سفارش در پاسخ صرافی نبود؛ سفارش‌های باز را دستی در والکس بررسی کنید")
+            }
             AppResult.Success(orderId)
         } catch (e: HttpException) {
             AppResult.Error(mapHttpError(e), e)

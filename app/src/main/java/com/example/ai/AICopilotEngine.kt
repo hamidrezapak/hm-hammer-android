@@ -59,7 +59,7 @@ object AICopilotEngine {
             }
 
             val body = JSONObject().apply {
-                put("model", "qwen/qwen3.6-27b")
+                put("model", "qwen/qwen3.8-27b")
                 put("messages", messages)
                 put("temperature", 0.5)
                 put("max_tokens", 450)

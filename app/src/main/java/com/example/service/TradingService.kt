@@ -36,7 +36,7 @@ class TradingService : Service() {
         val paper = intent?.getBooleanExtra("PAPER", true) ?: true
         if (!isRunning && paper) {
             isRunning = true
-            serviceScope.launch { PaperTrader(symbol, onStatus = { updateNotification(it); statusFlow.value = it }).run() }
+            serviceScope.launch { PaperTrader(symbol, quoteAsset = quoteAssetOf(symbol), onStatus = { updateNotification(it); statusFlow.value = it }).run() }
         } else if (!isRunning && apiKey.isNotBlank()) {
             isRunning = true
             startTradingLoop(apiKey, symbol)
@@ -84,6 +84,9 @@ class TradingService : Service() {
         }
     }
 
+    private fun quoteAssetOf(symbol: String): String =
+        if (symbol.uppercase(Locale.ROOT).endsWith("TMN")) "TMN" else "USDT"
+
     private fun startTradingLoop(apiKey: String, symbol: String) {
         serviceScope.launch {
             val (savedHolding, savedPrice) = loadPositionState()
@@ -91,6 +94,7 @@ class TradingService : Service() {
             var currentPositionPrice = savedPrice
             var failureCount = 0
             val baseAsset = extractBaseAsset(symbol)
+            val quoteAsset = quoteAssetOf(symbol)
 
             while (isActive && isRunning) {
                 try {
@@ -102,7 +106,7 @@ class TradingService : Service() {
 
                     // سناریوی خرید
                     if (!holdingAsset && currentPrice > 0.0) {
-                        val usdtResult = WallexLiveClient.fetchBalance(apiKey, "USDT")
+                        val usdtResult = WallexLiveClient.fetchBalance(apiKey, quoteAsset)
                         usdtResult.onSuccess { usdtBalance ->
                             failureCount = 0
                             if (usdtBalance >= 1.5) {

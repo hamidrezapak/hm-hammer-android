@@ -20,19 +20,19 @@ interface WallexApiService {
     @GET("account/balances")
     suspend fun getBalances(@Header("X-API-Key") apiKey: String): WallexBalancesResponse
 
-    @POST("orders")
+    @POST("account/orders")
     suspend fun placeOrder(
         @Header("X-API-Key") apiKey: String,
         @Body body: WallexOrderRequest
     ): WallexOrderResponse
 
-    @GET("orders/{id}")
+    @GET("account/orders/{id}")
     suspend fun getOrderStatus(
         @Header("X-API-Key") apiKey: String,
         @Path("id") orderId: String
     ): WallexOrderStatusResponse
 
-    @DELETE("orders/{id}")
+    @DELETE("account/orders/{id}")
     suspend fun cancelOrder(
         @Header("X-API-Key") apiKey: String,
         @Path("id") orderId: String

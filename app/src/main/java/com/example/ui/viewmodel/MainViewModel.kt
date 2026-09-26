@@ -274,7 +274,7 @@ class MainViewModel @Inject constructor(
             context?.let { ctx ->
                 val intent = android.content.Intent(ctx, com.example.service.TradingService::class.java).apply {
                     putExtra("API_KEY", key)
-                    putExtra("SYMBOL", "BTCUSDT")
+                    putExtra("SYMBOL", _selectedPair.value)
                 }
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                     ctx.startForegroundService(intent)
@@ -283,7 +283,7 @@ class MainViewModel @Inject constructor(
                 }
             }
             _isEngineRunning.value = true
-            _lastEngineLog.value = "موتور Paper (شبیه‌سازی) فعال شد (BTCUSDT)"
+            _lastEngineLog.value = "موتور Paper (شبیه‌سازی) فعال شد (${_selectedPair.value})"
         }
     }
 

@@ -36,7 +36,8 @@ data class WallexOrderRequest(
     val side: String,
     val type: String,
     val price: String,
-    val quantity: String
+    val quantity: String,
+    @Json(name = "client_id") val clientId: String
 )
 
 @JsonClass(generateAdapter = true)
@@ -45,7 +46,8 @@ data class WallexOrderResponse(val result: OrderResult)
 @JsonClass(generateAdapter = true)
 data class OrderResult(
     @Json(name = "order_id") val orderId: String? = null,
-    val id: String? = null
+    val id: String? = null,
+    val clientOrderId: String? = null
 )
 
 @JsonClass(generateAdapter = true)
