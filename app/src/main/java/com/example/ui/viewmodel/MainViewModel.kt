@@ -612,6 +612,8 @@ class MainViewModel @Inject constructor(
     }
 
     suspend fun queryAiCopilot(userQuestion: String): String {
+        val priceResult = getMarketPriceUseCase(_selectedPair.value)
+        if (priceResult is AppResult.Success) _currentPrice.value = priceResult.data
         return AICopilotEngine.queryRealAi(_selectedPair.value, _currentPrice.value, _tomanRate.value, userQuestion)
     }
 
