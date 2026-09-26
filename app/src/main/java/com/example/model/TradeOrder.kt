@@ -33,5 +33,6 @@ data class TradeOrder(
     val entryTimestamp: Long = System.currentTimeMillis(),
     val exitTimestamp: Long = 0L,
     val closeReason: String = "Active",
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val marginPositionId: Long? = null
 )

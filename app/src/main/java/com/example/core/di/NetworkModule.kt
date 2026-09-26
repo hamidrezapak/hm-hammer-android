@@ -14,6 +14,12 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
+import javax.inject.Qualifier
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class MarginRetrofit
+
 object NetworkModule {
 
     private const val BASE_URL = "https://api.wallex.ir/v1/"
@@ -53,4 +59,21 @@ object NetworkModule {
     @Singleton
     fun provideWallexApiService(retrofit: Retrofit): WallexApiService =
         retrofit.create(WallexApiService::class.java)
+
+    private const val MARGIN_BASE_URL = "https://api.wallex.ir/margin-trade/v1/"
+
+    @Provides
+    @Singleton
+    @MarginRetrofit
+    fun provideMarginRetrofit(client: OkHttpClient, moshi: Moshi): Retrofit =
+        Retrofit.Builder()
+            .baseUrl(MARGIN_BASE_URL)
+            .client(client)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+
+    @Provides
+    @Singleton
+    fun provideMarginApiService(@MarginRetrofit retrofit: Retrofit): com.example.data.remote.MarginApiService =
+        retrofit.create(com.example.data.remote.MarginApiService::class.java)
 }

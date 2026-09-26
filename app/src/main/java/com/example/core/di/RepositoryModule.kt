@@ -1,8 +1,10 @@
 package com.example.core.di
 
 import com.example.data.repository.AccountRepositoryImpl
+import com.example.data.repository.MarginRepositoryImpl
 import com.example.data.repository.OrderRepositoryImpl
 import com.example.domain.repository.AccountRepository
+import com.example.domain.repository.MarginRepository
 import com.example.domain.repository.OrderRepository
 import dagger.Binds
 import dagger.Module
@@ -21,4 +23,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindAccountRepository(impl: AccountRepositoryImpl): AccountRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindMarginRepository(impl: MarginRepositoryImpl): MarginRepository
 }

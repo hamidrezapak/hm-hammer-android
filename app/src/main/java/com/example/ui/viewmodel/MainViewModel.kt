@@ -11,6 +11,10 @@ import com.example.domain.model.OrderSide
 import com.example.domain.usecase.order.PlaceOrderUseCase
 import com.example.domain.usecase.account.FetchBalanceUseCase
 import com.example.domain.usecase.order.ClosePositionUseCase
+import com.example.domain.usecase.order.GetMarketPriceUseCase
+import com.example.domain.usecase.margin.OpenMarginPositionUseCase
+import com.example.domain.usecase.margin.CloseMarginPositionUseCase
+import com.example.domain.model.MarginSide
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -68,7 +72,10 @@ data class AuditLog(
 class MainViewModel @Inject constructor(
     private val placeOrderUseCase: PlaceOrderUseCase,
     private val fetchBalanceUseCase: FetchBalanceUseCase,
-    private val closePositionUseCase: ClosePositionUseCase
+    private val closePositionUseCase: ClosePositionUseCase,
+    private val openMarginPositionUseCase: OpenMarginPositionUseCase,
+    private val closeMarginPositionUseCase: CloseMarginPositionUseCase,
+    private val getMarketPriceUseCase: GetMarketPriceUseCase
 ) : ViewModel() {
     private val _currentTab = MutableStateFlow(AppTab.TRADE)
     val currentTab: StateFlow<AppTab> = _currentTab.asStateFlow()
@@ -327,8 +334,14 @@ class MainViewModel @Inject constructor(
     private fun quoteAssetOf(symbol: String): String =
         if (symbol.uppercase(java.util.Locale.ROOT).endsWith("TMN")) "TMN" else "USDT"
 
-    fun executeOrder(side: String, allocationPercent: Int, isAuto: Boolean = false) {
+    fun executeOrder(side: String, allocationPercent: Int, leverage: String = "1x", isAuto: Boolean = false) {
+        if (leverage.trim().lowercase(Locale.ROOT) != "1x") {
+            executeMarginOrder(side, allocationPercent, leverage)
+            return
+        }
         viewModelScope.launch {
+            val priceResult = getMarketPriceUseCase(_selectedPair.value)
+            if (priceResult is AppResult.Success) _currentPrice.value = priceResult.data
             val balanceResult = fetchBalanceUseCase(quoteAssetOf(_selectedPair.value))
             val bal = when (balanceResult) {
                 is AppResult.Success -> balanceResult.data.also { _usdtBalance.value = it }
@@ -385,7 +398,7 @@ class MainViewModel @Inject constructor(
                 tp3 = levels.tp3,
                 tp4 = levels.tp4,
                 amountTmn = amountTmn,
-                leverage = "2x",
+                leverage = "1x",
                 status = TradeStatus.OPEN,
                 pnlPercent = 0.0,
                 profitUsdt = 0.0,
@@ -406,6 +419,98 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun executeMarginOrder(side: String, allocationPercent: Int, leverage: String) {
+        viewModelScope.launch {
+            val quoteAsset = quoteAssetOf(_selectedPair.value)
+            val balanceResult = fetchBalanceUseCase(quoteAsset)
+            val bal = when (balanceResult) {
+                is AppResult.Success -> balanceResult.data.also { _usdtBalance.value = it }
+                is AppResult.Error -> {
+                    val err = "دریافت موجودی واقعی ناموفق بود: ${balanceResult.message}"
+                    _lastEngineLog.value = err
+                    addAuditLog("MARGIN_BALANCE_ERROR", err, false)
+                    return@launch
+                }
+            }
+            if (bal <= 0.0) {
+                val err = "موجودی حساب صرافی ۰ است. امکان معامله وجود ندارد."
+                _lastEngineLog.value = err
+                addAuditLog("MARGIN_ORDER_ERROR", err, false)
+                return@launch
+            }
+            val collateral = bal * (allocationPercent.coerceIn(1, 100) / 100.0)
+            if (collateral < 2.0) {
+                val err = "موجودی برای وثیقه این پوزیشن ناکافی است."
+                _lastEngineLog.value = err
+                addAuditLog("MARGIN_ORDER_ERROR", err, false)
+                return@launch
+            }
+
+            val priceResult = getMarketPriceUseCase(_selectedPair.value)
+            val price = when (priceResult) {
+                is AppResult.Success -> priceResult.data.also { _currentPrice.value = it }
+                is AppResult.Error -> {
+                    val err = "دریافت قیمت لحظه‌ای ناموفق بود: ${priceResult.message}"
+                    _lastEngineLog.value = err
+                    addAuditLog("MARGIN_ORDER_ERROR", err, false)
+                    return@launch
+                }
+            }
+
+            val riskCoef = leverage.trim().lowercase(Locale.ROOT).removeSuffix("x").toIntOrNull() ?: 1
+            val levels = _dynamicLevels.value
+            val marginSide = if (side.equals("BUY", ignoreCase = true)) MarginSide.LONG else MarginSide.SHORT
+
+            when (val result = openMarginPositionUseCase(
+                market = _selectedPair.value,
+                side = marginSide,
+                collateral = collateral,
+                openPrice = price,
+                riskCoef = riskCoef,
+                stopLoss = levels.stopLoss,
+                takeProfit = levels.tp1
+            )) {
+                is AppResult.Error -> {
+                    addAuditLog("MARGIN_ORDER_FAIL", result.message, false)
+                    _lastEngineLog.value = "پوزیشن مارجین باز نشد: ${result.message}"
+                }
+                is AppResult.Success -> {
+                    val pos = result.data
+                    val amountTmn = collateral * _tomanRate.value
+                    val newOrder = TradeOrder(
+                        symbol = _selectedPair.value,
+                        side = side,
+                        entryPrice = price,
+                        currentPrice = price,
+                        exitPrice = 0.0,
+                        stopLoss = levels.stopLoss,
+                        tp1 = levels.tp1,
+                        tp2 = levels.tp2,
+                        tp3 = levels.tp3,
+                        tp4 = levels.tp4,
+                        amountTmn = amountTmn,
+                        leverage = leverage,
+                        status = TradeStatus.OPEN,
+                        pnlPercent = 0.0,
+                        profitUsdt = 0.0,
+                        isPostOnly = false,
+                        entryTimestamp = System.currentTimeMillis(),
+                        exitTimestamp = 0L,
+                        closeReason = "Margin Position Opened (id=${pos.id})",
+                        timestamp = System.currentTimeMillis(),
+                        marginPositionId = pos.id
+                    )
+                    _usdtBalance.value -= collateral
+                    _trades.value = listOf(newOrder) + _trades.value
+                    val liq = pos.liquidityPrice?.let { String.format(Locale.US, "%.2f", it) } ?: "نامشخص"
+                    val logText = "پوزیشن مارجین ($leverage) باز شد. قیمت تقریبی لیکوئید: $liq"
+                    _lastEngineLog.value = logText
+                    addAuditLog("MARGIN_ORDER_OPEN", logText, true)
+                }
+            }
+        }
+    }
+
     fun closeTradeManually(order: TradeOrder) {
         closeOrderWithRealPrice(order.timestamp, reason = "Manual Close")
     }
@@ -416,6 +521,49 @@ class MainViewModel @Inject constructor(
             if (order.status != TradeStatus.OPEN) return@launch
 
             _lastEngineLog.value = "در حال بستن پوزیشن با قیمت واقعی بازار..."
+
+            if (order.marginPositionId != null) {
+                val priceResult = getMarketPriceUseCase(order.symbol)
+                val currentPrice = when (priceResult) {
+                    is AppResult.Success -> priceResult.data
+                    is AppResult.Error -> {
+                        _lastEngineLog.value = "دریافت قیمت لحظه‌ای ناموفق بود: ${priceResult.message}"
+                        addAuditLog("CLOSE_ERROR", priceResult.message, false)
+                        return@launch
+                    }
+                }
+                when (val result = closeMarginPositionUseCase(order.marginPositionId, currentPrice)) {
+                    is AppResult.Error -> {
+                        _lastEngineLog.value = "بستن پوزیشن مارجین ناموفق بود: ${result.message}"
+                        addAuditLog("CLOSE_ERROR", result.message, false)
+                    }
+                    is AppResult.Success -> {
+                        val riskCoef = order.leverage.trim().lowercase(Locale.ROOT).removeSuffix("x").toIntOrNull() ?: 1
+                        val collateral = order.amountTmn / _tomanRate.value
+                        val closePrice = result.data.closePrice ?: currentPrice
+                        val direction = if (order.side.equals("BUY", ignoreCase = true)) 1 else -1
+                        val approxPnl = collateral * riskCoef * direction * (closePrice - order.entryPrice) / order.entryPrice
+                        _usdtBalance.value += collateral + approxPnl
+                        _trades.value = _trades.value.map {
+                            if (it.timestamp == orderTimestamp) {
+                                it.copy(
+                                    status = TradeStatus.CLOSED,
+                                    exitPrice = closePrice,
+                                    profitUsdt = approxPnl,
+                                    pnlPercent = if (order.entryPrice != 0.0) (closePrice - order.entryPrice) / order.entryPrice * 100.0 * riskCoef * direction else 0.0,
+                                    exitTimestamp = System.currentTimeMillis(),
+                                    closeReason = result.data.closeReason ?: reason
+                                )
+                            } else it
+                        }
+                        val sign = if (approxPnl >= 0) "+" else ""
+                        val resText = "پوزیشن مارجین بسته شد. سود/زیان تقریبی: ${sign}${String.format(Locale.US, "%.2f", approxPnl)} (تقریبی است، کارمزد/بهره لحاظ نشده)"
+                        _lastEngineLog.value = resText
+                        addAuditLog("MARGIN_CLOSE", resText, approxPnl >= 0)
+                    }
+                }
+                return@launch
+            }
 
             val tradeAmountUsdt = order.amountTmn / _tomanRate.value
             val quantity = tradeAmountUsdt / order.entryPrice
