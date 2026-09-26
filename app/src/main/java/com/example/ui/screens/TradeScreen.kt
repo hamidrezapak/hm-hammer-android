@@ -19,8 +19,8 @@ import com.example.ui.viewmodel.MainViewModel
 @Composable
 fun TradeScreen(
 viewModel: MainViewModel) {
-    var selectedLeverage by remember { mutableStateOf("1x") }
-    var selectedAllocation by remember { mutableStateOf(25) }
+    val selectedLeverage by viewModel.selectedLeverage.collectAsState()
+    val selectedAllocation by viewModel.selectedAllocation.collectAsState()
     var showApiDialog by remember { mutableStateOf(false) }
     var apiKeyInput by remember { mutableStateOf("") }
     var apiMessage by remember { mutableStateOf("") }
@@ -201,7 +201,7 @@ viewModel: MainViewModel) {
                                     if (isSelected) Color(0xFF00E5FF) else Color(0xFF21262D),
                                     shape = RoundedCornerShape(8.dp)
                                 )
-                                .clickable { selectedLeverage = lev }
+                                .clickable { viewModel.setSelectedLeverage(lev) }
                                 .padding(vertical = 10.dp),
                             contentAlignment = Alignment.Center
                         ) {
@@ -236,7 +236,7 @@ viewModel: MainViewModel) {
                                     if (isSelected) Color(0xFF00B0FF) else Color(0xFF21262D),
                                     shape = RoundedCornerShape(8.dp)
                                 )
-                                .clickable { selectedAllocation = alloc }
+                                .clickable { viewModel.setSelectedAllocation(alloc) }
                                 .padding(vertical = 8.dp),
                             contentAlignment = Alignment.Center
                         ) {

@@ -164,6 +164,20 @@ class MainViewModel @Inject constructor(
 
     fun setTab(tab: AppTab) { _currentTab.value = tab }
     fun setSelectedPair(symbol: String) { _selectedPair.value = symbol }
+
+    private val _selectedAllocation = MutableStateFlow(com.example.network.TradePrefsStore.getAllocation())
+    val selectedAllocation: StateFlow<Int> = _selectedAllocation.asStateFlow()
+    fun setSelectedAllocation(percent: Int) {
+        _selectedAllocation.value = percent
+        com.example.network.TradePrefsStore.saveAllocation(percent)
+    }
+
+    private val _selectedLeverage = MutableStateFlow(com.example.network.TradePrefsStore.getLeverage())
+    val selectedLeverage: StateFlow<String> = _selectedLeverage.asStateFlow()
+    fun setSelectedLeverage(lev: String) {
+        _selectedLeverage.value = lev
+        com.example.network.TradePrefsStore.saveLeverage(lev)
+    }
     fun setHistorySearchQuery(query: String) { historySearchQuery.value = query }
     fun setHistorySymbolFilter(sym: String) { historySymbolFilter.value = sym }
     fun setHistorySideFilter(side: String) { historySideFilter.value = side }

@@ -43,6 +43,7 @@ class MainActivity : ComponentActivity() {
         com.example.network.TelegramConfigStore.init(applicationContext)
         com.example.network.SubscriptionStore.init(applicationContext)
         com.example.network.PinLockStore.init(applicationContext)
+        com.example.network.TradePrefsStore.init(applicationContext)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
